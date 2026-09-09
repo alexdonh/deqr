@@ -26,7 +26,8 @@
     "fixtures": "node scripts/make-fixtures.mjs --force",
     "verify": "node scripts/make-fixtures.mjs --quiet && node scripts/verify-browser.mjs",
     "verify:perf": "node scripts/make-fixtures.mjs --quiet && node scripts/verify-browser.mjs perf-test.html",
-    "check": "node scripts/sync-wasm.mjs && wxt prepare && tsc --noEmit && pnpm test"
+    "check": "node scripts/sync-wasm.mjs && wxt prepare && tsc --noEmit && pnpm test",
+    "release": "bash scripts/release.sh"
   },
   "dependencies": {
     "tldts": "^7.4.12",

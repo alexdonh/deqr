@@ -106,6 +106,17 @@ jobs:
         shell: bash
         run: |
           version="${{ steps.version.outputs.version }}"
+          changes="$(awk -v marker="## ${version}" '
+            index($0, marker) == 1 { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md 2>/dev/null || true)"
+          if [ -n "$(printf '%s' "$changes" | tr -d '[:space:]')" ]; then
+            changes_section="$(printf '## What changed\n%s' "$changes")"
+          else
+            changes_section=""
+          fi
+
           if [ -f ".output/deqr-${version}.crx" ]; then
             crx_section="Grab **\`deqr-${version}.crx\`** and **\`updates.xml\`**, then deploy via
           \`ExtensionInstallForcelist\` or \`ExtensionSettings\` pointing at that
@@ -118,6 +129,8 @@ jobs:
           the repository."
           fi
           cat > .output/NOTES.md <<EOF
+          ${changes_section}
+
           ## Which file do I want?
 
           ### Chrome, Edge, Brave, Opera, Vivaldi - load unpacked
