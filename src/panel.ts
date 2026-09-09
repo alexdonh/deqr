@@ -13,6 +13,7 @@ import type { Field } from './classify';
 import type { QrResult } from './messages';
 import type { Outcome } from './scan';
 import type { Rasterizable } from './raster';
+import { applyTheme, type Settings, type Theme } from './settings';
 
 /** Longer than this and the panel shows a prefix with an expand control. */
 const DISPLAY_LIMIT = 4096;
@@ -56,12 +57,9 @@ const STYLE = `
 .card {
   width: min(560px, 100%); max-height: min(80vh, 720px);
   overflow: auto; box-sizing: border-box;
-  background: #fbfbfc; color: #16181d;
+  background: light-dark(#fbfbfc, #16181d); color: light-dark(#16181d, #eceef2);
   border-radius: 12px; padding: 0;
   box-shadow: 0 24px 64px rgba(0,0,0,.4);
-}
-@media (prefers-color-scheme: dark) {
-  .card { background: #16181d; color: #eceef2; }
 }
 
 .head { display: flex; align-items: center; gap: 10px; padding: 16px 18px 12px; }
@@ -72,14 +70,9 @@ const STYLE = `
   font: 650 10px/1.4 inherit; text-transform: uppercase; letter-spacing: .06em;
 }
 .chip svg { flex: none; }
-.chip.danger { background: #fde4e2; color: #8a1c10; }
-.chip.caution { background: #fdf0d5; color: #7a5106; }
-.chip.info { background: #e3ecfd; color: #1c437f; }
-@media (prefers-color-scheme: dark) {
-  .chip.danger { background: #4a1712; color: #ffc9c1; }
-  .chip.caution { background: #402f08; color: #ffe1a3; }
-  .chip.info { background: #14294a; color: #c3d8ff; }
-}
+.chip.danger { background: light-dark(#fde4e2, #4a1712); color: light-dark(#8a1c10, #ffc9c1); }
+.chip.caution { background: light-dark(#fdf0d5, #402f08); color: light-dark(#7a5106, #ffe1a3); }
+.chip.info { background: light-dark(#e3ecfd, #14294a); color: light-dark(#1c437f, #c3d8ff); }
 .close {
   display: inline-flex; border: 0; background: transparent; cursor: pointer;
   color: inherit; opacity: .55; padding: 2px;
@@ -97,12 +90,8 @@ const STYLE = `
   display: flex; gap: 9px; align-items: flex-start;
 }
 .warn > svg { flex: none; margin-top: 1px; opacity: .8; }
-.warn.danger { background: #fdeceb; border-color: #c0392b; }
-.warn.caution { background: #fdf6e6; border-color: #b8860b; }
-@media (prefers-color-scheme: dark) {
-  .warn.danger { background: #2c1310; }
-  .warn.caution { background: #2a2208; }
-}
+.warn.danger { background: light-dark(#fdeceb, #2c1310); border-color: #c0392b; }
+.warn.caution { background: light-dark(#fdf6e6, #2a2208); border-color: #b8860b; }
 .warn strong { display: block; font-size: 12.5px; }
 .warn span { display: block; margin-top: 3px; font-size: 12px; opacity: .8; }
 
@@ -217,7 +206,7 @@ export class Ui {
   /** The badge currently revealed by hover or focus, if any. */
   private active?: Tracked;
 
-  constructor(private readonly revealSecrets: boolean) {
+  constructor(private readonly settings: Settings) {
     const host = make('div');
     host.setAttribute('data-deqr', '');
     // Closed: the page cannot reach in via element.shadowRoot.
@@ -227,6 +216,14 @@ export class Ui {
     this.layer = make('div', 'layer');
     this.root.append(style, this.layer);
     document.documentElement.append(host);
+
+    // Inside the shadow root, so the page cannot read or flip the theme.
+    applyTheme(this.layer, settings.theme);
+    // Picking a theme in options should not need every open tab reloaded.
+    browser.storage.onChanged.addListener((changes, area) => {
+      if (area !== 'local' || !changes.theme) return;
+      applyTheme(this.layer, changes.theme.newValue as Theme);
+    });
 
     // Hover uses hit-testing rects, not mouseenter, 
     // since overlays can block pointer events to images.
@@ -444,7 +441,7 @@ export class Ui {
     for (const field of fields) {
       list.append(make('dt', undefined, field.name));
       const dd = make('dd');
-      if (field.secret && !this.revealSecrets) {
+      if (field.secret && !this.settings.revealSecrets) {
         const wrap = make('span', 'mask');
         const dots = make('span', undefined, '**********');
         const button = make('button', 'reveal');
@@ -476,7 +473,7 @@ export class Ui {
       (clipped ? `\n... ${text.length - DISPLAY_LIMIT} more characters` : '');
 
     const hasSecret = result.payload.fields.some((field) => field.secret);
-    if (!hasSecret || this.revealSecrets) return make('pre', 'raw', body);
+    if (!hasSecret || this.settings.revealSecrets) return make('pre', 'raw', body);
 
     const holder = make('div', 'raw-hidden');
     const button = make('button', 'reveal');

@@ -1,21 +1,12 @@
 :root {
   color-scheme: light dark;
-  --bg: #f7f7f9;
-  --card: #ffffff;
-  --fg: #16181d;
-  --dim: #5c6270;
-  --line: #e2e4ea;
+  --bg: light-dark(#f7f7f9, #101114);
+  --card: light-dark(#ffffff, #191b20);
+  --fg: light-dark(#16181d, #eceef2);
+  --dim: light-dark(#5c6270, #9aa1ad);
+  --line: light-dark(#e2e4ea, #2a2d35);
   --accent: #1b6ef3;
   --danger: #c0392b;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #101114;
-    --card: #191b20;
-    --fg: #eceef2;
-    --dim: #9aa1ad;
-    --line: #2a2d35;
-  }
 }
 
 * { box-sizing: border-box; }

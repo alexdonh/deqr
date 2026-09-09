@@ -12,7 +12,7 @@ export default defineContentScript({
     const settings = await readSettings();
     if (settings.disabledSites.includes(location.hostname)) return;
 
-    const ui = new Ui(settings.revealSecrets);
+    const ui = new Ui(settings);
     const scanner = new Scanner(settings, (el, outcome) => ui.add(el, outcome));
     scanner.start();
   },

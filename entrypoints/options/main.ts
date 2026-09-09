@@ -1,6 +1,6 @@
 import { browser } from 'wxt/browser';
 
-import { readSettings, writeSettings } from '../../src/settings';
+import { applyTheme, readSettings, writeSettings, type Theme } from '../../src/settings';
 
 // permissions.request() needs a user gesture and is unavailable in content
 // scripts, which is why granting an origin happens here rather than inline on
@@ -21,6 +21,7 @@ const siteInput = $<HTMLInputElement>('site-input');
 const siteList = $<HTMLUListElement>('site-list');
 const deepScan = $<HTMLInputElement>('deep-scan');
 const revealSecrets = $<HTMLInputElement>('reveal-secrets');
+const themes = document.querySelectorAll<HTMLInputElement>('input[name="theme"]');
 
 function row(label: string, onRemove: () => void): HTMLLIElement {
   const li = document.createElement('li');
@@ -138,10 +139,21 @@ revealSecrets.addEventListener('change', () => {
   void writeSettings({ revealSecrets: revealSecrets.checked });
 });
 
+for (const input of themes) {
+  input.addEventListener('change', () => {
+    if (!input.checked) return;
+    const theme = input.value as Theme;
+    applyTheme(document.documentElement, theme);
+    void writeSettings({ theme });
+  });
+}
+
 async function init(): Promise<void> {
   const settings = await readSettings();
   deepScan.checked = settings.deepScan;
   revealSecrets.checked = settings.revealSecrets;
+  applyTheme(document.documentElement, settings.theme);
+  for (const input of themes) input.checked = input.value === settings.theme;
   await Promise.all([renderGranted(), renderSites()]);
 }
 
