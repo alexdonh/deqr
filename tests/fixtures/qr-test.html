@@ -126,6 +126,30 @@
       </figure>
     </div>
 
+    <h2>Reachability - both must be badged</h2>
+    <p class="note">
+      Two ways a real page hides a QR from a naive scanner. The overlaid one is
+      what a loading spinner or a lightbox trigger does: the image never sees the
+      pointer, so hover has to be a hit test against the rect instead of a
+      <code>mouseenter</code> listener. The shadow one is invisible to any
+      selector run on the document, so open roots have to be walked separately.
+    </p>
+    <div class="grid">
+      <figure>
+        <div style="position: relative">
+          <img src="./img/safe-link.png" alt="overlaid QR" />
+          <span
+            style="position: absolute; inset: 0; background: rgba(255, 255, 255, 0.02)"
+          ></span>
+        </div>
+        <figcaption><b>Under an overlay</b>sibling span covers it, as on qrcode-monkey.com</figcaption>
+      </figure>
+      <figure>
+        <qr-in-shadow></qr-in-shadow>
+        <figcaption><b>In an open shadow root</b>web component, as on qr-code-generator.com</figcaption>
+      </figure>
+    </div>
+
     <h2>Should not be badged</h2>
     <p class="note">
       A badge on any of these is a false positive: it means the prefilter is too
@@ -201,6 +225,21 @@
         document.getElementById('canvas-qr').getContext('2d').drawImage(img, 0, 0, 336, 336);
       };
       img.src = './img/safe-link.png';
+
+      // A QR inside an open shadow root: querySelectorAll on the document
+      // cannot see it, so scan.ts has to walk the root itself.
+      customElements.define(
+        'qr-in-shadow',
+        class extends HTMLElement {
+          connectedCallback() {
+            const root = this.attachShadow({ mode: 'open' });
+            const inner = new Image(168, 168);
+            inner.src = './img/safe-link.png';
+            inner.style.display = 'block';
+            root.append(inner);
+          }
+        },
+      );
 
       const fill = (id, paint) => {
         const c = document.getElementById(id);

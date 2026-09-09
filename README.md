@@ -43,8 +43,8 @@ whole page, and exactly **3** crossings.
 
 ### What it can read
 
-`<img>` (PNG, JPG, WEBP, SVG), inline `<svg>`, `<canvas>`, and `data:` URLs. CSS
-`background-image` isn't scanned yet.
+`<img>` (PNG, JPG, WEBP, SVG), inline `<svg>`, `<canvas>`, and `data:` URLs,
+including inside open shadow roots. CSS `background-image` isn't scanned yet.
 
 Cross-origin images served without CORS headers taint the canvas, which means
 the content script can't read a single pixel of them. Those get an **Allow
@@ -160,7 +160,7 @@ components' terms require it.
 
 ## Lessons learnt
 
-Four things that cost real debugging time and would be easy to hit again:
+Five things that cost real debugging time and would be easy to hit again:
 
 1. **Chrome's `runtime.sendMessage` is JSON-serialized, not structured-clone.** A
    `Uint8Array` arrives as `{"0":12,"1":255,...}`, quietly loses `.length`, and
@@ -176,3 +176,11 @@ Four things that cost real debugging time and would be easy to hit again:
 4. **The prefilter needs its vertical cross-check.** A horizontal-only 1:1:3:1:1
    scan happily accepts photographic noise, because at one pixel per module that
    run pattern turns up constantly. `tests/prefilter.test.ts` guards it.
+5. **Finding the QR is the easy half; reaching it is not.** Real QR generator
+   sites broke deQR two ways. One puts a loading spinner over the preview, and
+   an overlaid sibling means the image never gets `mouseenter`, so hover is a
+   hit test against the rect instead. Another renders its QR inside a web
+   component, where no selector on the document can see it, so open shadow roots
+   are walked and observed separately. Both are in `qr-test.html`, and
+   `pnpm verify` moves a real pointer over each and fails if no badge is under
+   the cursor.

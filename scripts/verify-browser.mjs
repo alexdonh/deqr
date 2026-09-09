@@ -207,6 +207,49 @@ try {
 
   if (stats.host !== 1) failed = true;
 
+  /**
+   * Move the real pointer over an element and report whether a deQR badge is
+   * what ends up under the cursor. The badge lives in a closed shadow root, so
+   * it cannot be selected - but elementFromPoint returns its host, which is
+   * enough, and it exercises the same path a user does.
+   */
+  async function badgeUnderPointer(selector) {
+    const box = await cdp.send('Runtime.evaluate', {
+      expression: `(() => {
+        const el = ${selector};
+        if (!el) return null;
+        el.scrollIntoView({ block: 'center' });
+        const r = el.getBoundingClientRect();
+        return JSON.stringify({ x: r.left + r.width / 2, y: r.bottom - 13 });
+      })()`,
+      returnByValue: true,
+    });
+    if (!box.result.value) return 'element not found';
+    const { x, y } = JSON.parse(box.result.value);
+    await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });
+    await sleep(200);
+    const hit = await cdp.send('Runtime.evaluate', {
+      expression: `(document.elementFromPoint(${x}, ${y})?.hasAttribute('data-deqr') ?? false)`,
+      returnByValue: true,
+    });
+    return hit.result.value === true ? 'badge' : 'no badge';
+  }
+
+  if (page === 'qr-test.html') {
+    // Real pages hide images from a naive scanner in two ways, and both were
+    // found in the wild: an overlaid sibling swallows the pointer, and an open
+    // shadow root hides the image from every document-level selector.
+    const reach = {
+      'under an overlay': `document.querySelector('img[alt="overlaid QR"]')`,
+      'in a shadow root': `document.querySelector('qr-in-shadow')?.shadowRoot?.querySelector('img')`,
+    };
+    for (const [label, selector] of Object.entries(reach)) {
+      const result = await badgeUnderPointer(selector);
+      console.log(`${`${label}:`.padEnd(20)}${result}`);
+      if (result !== 'badge') failed = true;
+    }
+  }
+
   if (panelFor) {
     // Scroll the target into view, hover it, then click where the badge sits:
     // horizontally centred on the image, 13px above its bottom edge.
@@ -216,7 +259,6 @@ try {
           .find((i) => (i.currentSrc || i.src).includes(${JSON.stringify(panelFor)}));
         if (!el) return null;
         el.scrollIntoView({ block: 'center' });
-        el.dispatchEvent(new MouseEvent('mouseenter'));
         const r = el.getBoundingClientRect();
         return JSON.stringify({ x: r.left + r.width / 2, y: r.bottom - 13 });
       })()`,
@@ -244,23 +286,13 @@ try {
     process.exit(0);
   }
 
-  // Badges only appear on hover or focus, so the screenshot has to hover
-  // something for the pill to be visible at all. Hover every detected image:
-  // only one badge can be under the cursor in reality, but for a static capture
-  // this shows that each one places itself correctly.
-  const hovered = await cdp.send('Runtime.evaluate', {
-    expression: `(() => {
-      const shown = [...document.querySelectorAll('img, canvas, svg')]
-        .filter((el) => {
-          const r = el.getBoundingClientRect();
-          return r.width >= 40 && r.height >= 40;
-        });
-      for (const el of shown) el.dispatchEvent(new MouseEvent('mouseenter'));
-      return shown.length;
-    })()`,
-    returnByValue: true,
-  });
-  console.log(`hover dispatched:   ${hovered.result.value} elements`);
+  // Badges only show under the pointer, so the screenshot needs one hovered to
+  // show a pill at all. Only one can be up at a time, which is also true for a
+  // real user.
+  const first = await badgeUnderPointer(
+    `[...document.querySelectorAll('img')].find((i) => (i.currentSrc || i.src).includes('safe-link'))`,
+  );
+  console.log(`hovered for shot:   ${first}`);
   await sleep(400);
 
   const shot = await cdp.send('Page.captureScreenshot', { captureBeyondViewport: true });

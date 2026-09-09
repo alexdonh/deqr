@@ -202,12 +202,18 @@ interface Tracked {
   badge: HTMLButtonElement;
 }
 
+function covers(rect: DOMRect, at: { x: number; y: number }): boolean {
+  return at.x >= rect.left && at.x <= rect.right && at.y >= rect.top && at.y <= rect.bottom;
+}
+
 export class Ui {
   private readonly root: ShadowRoot;
   private readonly layer: HTMLDivElement;
   private readonly tracked: Tracked[] = [];
   private scrim?: HTMLDivElement;
   private frame = 0;
+  /** Last known pointer position in viewport coordinates. */
+  private pointer?: { x: number; y: number };
   /** The badge currently revealed by hover or focus, if any. */
   private active?: Tracked;
 
@@ -222,9 +228,26 @@ export class Ui {
     this.root.append(style, this.layer);
     document.documentElement.append(host);
 
-    // Only the badge currently on screen needs to follow the page, so this is a
-    // single-element update rather than a sweep over every tracked image.
-    const reposition = () => this.scheduleReposition();
+    // Hover uses hit-testing rects, not mouseenter, 
+    // since overlays can block pointer events to images.
+    addEventListener(
+      'pointermove',
+      (event) => {
+        this.pointer = { x: event.clientX, y: event.clientY };
+        this.schedule();
+      },
+      { passive: true, capture: true },
+    );
+    document.addEventListener(
+      'pointerleave',
+      () => {
+        this.pointer = undefined;
+        this.schedule();
+      },
+      { passive: true },
+    );
+
+    const reposition = () => this.schedule();
     addEventListener('scroll', reposition, { passive: true, capture: true });
     addEventListener('resize', reposition, { passive: true });
   }
@@ -262,17 +285,9 @@ export class Ui {
     const tracked: Tracked = { el, badge };
     this.tracked.push(tracked);
 
-    // Listeners on the page element, not DOM changes to it. The badge gets its
-    // own pair because it can extend past the image's edge, and moving onto it
-    // must not read as leaving.
-    const reveal = () => this.reveal(tracked);
-    const conceal = () => this.conceal(tracked);
-    el.addEventListener('mouseenter', reveal, { passive: true });
-    el.addEventListener('mouseleave', conceal, { passive: true });
-    badge.addEventListener('mouseenter', reveal, { passive: true });
-    badge.addEventListener('mouseleave', conceal, { passive: true });
-    badge.addEventListener('focus', reveal);
-    badge.addEventListener('blur', conceal);
+    badge.addEventListener('focus', () => this.reveal(tracked));
+    badge.addEventListener('blur', () => this.conceal(tracked));
+    this.schedule();
   }
 
   private reveal(tracked: Tracked): void {
@@ -288,12 +303,32 @@ export class Ui {
     if (this.active === tracked) this.active = undefined;
   }
 
-  private scheduleReposition(): void {
-    if (this.frame !== 0 || !this.active) return;
+  /** Coalesce pointer, scroll and resize into one frame of layout reads. */
+  private schedule(): void {
+    if (this.frame !== 0 || this.tracked.length === 0) return;
     this.frame = requestAnimationFrame(() => {
       this.frame = 0;
+      this.hitTest();
       if (this.active) this.place(this.active);
     });
+  }
+
+  private hitTest(): void {
+    const at = this.pointer;
+    const hit =
+      at &&
+      this.tracked.find(
+        (t) =>
+          t.el.isConnected &&
+          (covers(t.el.getBoundingClientRect(), at) ||
+            // The badge hangs past the image edge; moving onto it is not leaving.
+            (t.badge.classList.contains('show') && covers(t.badge.getBoundingClientRect(), at))),
+      );
+    if (hit) {
+      if (this.active !== hit) this.reveal(hit);
+      return;
+    }
+    if (this.active) this.conceal(this.active);
   }
 
   /** Badges sit in viewport coordinates, so they follow scroll on the next frame. */

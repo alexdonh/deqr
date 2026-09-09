@@ -32,6 +32,8 @@ const MIN_EDGE = 40;
 /** QR codes are square; allow slack for padding and letterboxing, reject banners. */
 const MIN_ASPECT = 0.25;
 const MAX_ASPECT = 4;
+const LOCKED_MIN_ASPECT = 0.9;
+const LOCKED_MAX_ASPECT = 1.1;
 /**
  * Cumulative main-thread budget for stage-1 work on a page.
  *
@@ -44,6 +46,13 @@ const MAX_STAGE1_MS = 1000;
 const MAX_REMOTE = 50;
 /** Main-thread ms per idle slice. */
 const SLICE_BUDGET_MS = 4;
+
+const MUTATIONS: MutationObserverInit = {
+  childList: true,
+  subtree: true,
+  attributes: true,
+  attributeFilter: ['src', 'srcset'],
+};
 
 export type Outcome =
   | { status: 'qr'; result: QrResult }
@@ -109,6 +118,7 @@ export class Scanner {
   private draining = false;
   private observer?: IntersectionObserver;
   private mutations?: MutationObserver;
+  private readonly shadows = new WeakSet<ShadowRoot>();
 
   constructor(
     private readonly settings: Settings,
@@ -140,12 +150,7 @@ export class Scanner {
         }
       }
     });
-    this.mutations.observe(document.documentElement, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['src', 'srcset'],
-    });
+    this.mutations.observe(document.documentElement, MUTATIONS);
 
     this.considerTree(document.documentElement);
   }
@@ -155,9 +160,27 @@ export class Scanner {
     this.mutations?.disconnect();
   }
 
-  private considerTree(root: Element): void {
-    this.consider(root);
-    for (const el of root.querySelectorAll('img, canvas, svg')) this.consider(el);
+  private considerTree(root: Element | ShadowRoot): void {
+    if (root instanceof Element) this.consider(root);
+    // One '*' walk rather than a candidate selector plus a second pass for
+    // shadow hosts: a QR inside a web component is invisible to any selector
+    // run on the document, and several QR generators render theirs that way.
+    for (const el of root.querySelectorAll('*')) {
+      this.consider(el);
+      if (el.shadowRoot) this.watchShadow(el.shadowRoot);
+    }
+  }
+
+  /**
+   * Open shadow roots need their own observer. attachShadow raises no mutation,
+   * so this relies on the root already existing when the host is inserted -
+   * true for custom elements, which attach it while connecting.
+   */
+  private watchShadow(root: ShadowRoot): void {
+    if (this.shadows.has(root)) return;
+    this.shadows.add(root);
+    this.mutations?.observe(root, MUTATIONS);
+    this.considerTree(root);
   }
 
   private consider(el: Element): void {
@@ -197,6 +220,13 @@ export class Scanner {
   private report(el: Rasterizable, outcome: Outcome, key: string | undefined): void {
     if (key) this.results.set(key, outcome);
     if (outcome.status !== 'none') this.onOutcome(el, outcome);
+  }
+
+  private reportLocked(el: Rasterizable, origin: string, key: string | undefined): void {
+    const rect = el.getBoundingClientRect();
+    const aspect = rect.width / rect.height;
+    const square = aspect >= LOCKED_MIN_ASPECT && aspect <= LOCKED_MAX_ASPECT;
+    this.report(el, square ? { status: 'locked', origin } : { status: 'none' }, key);
   }
 
   private async evaluate(el: Rasterizable): Promise<void> {
@@ -280,7 +310,7 @@ export class Scanner {
       this.grantedOrigins.set(origin, granted);
     }
     if (!granted) {
-      this.report(el, { status: 'locked', origin }, key);
+      this.reportLocked(el, origin, key);
       return;
     }
     if (this.remoteAttempts >= MAX_REMOTE) return;
@@ -296,7 +326,7 @@ export class Scanner {
     // The grant was revoked since we cached it.
     if (response.reason === 'no-permission') {
       this.grantedOrigins.set(origin, false);
-      this.report(el, { status: 'locked', origin }, key);
+      this.reportLocked(el, origin, key);
       return;
     }
     // Remote SVG: workers cannot rasterize SVG, so the background handed back the
