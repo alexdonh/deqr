@@ -1,0 +1,200 @@
+name: Release
+
+# Tag-triggered. `git tag v0.2.0 && git push origin v0.2.0` builds, verifies and
+# publishes a GitHub Release with every downloadable format.
+#
+# This workflow does NOT publish to any store. Store submission needs review and
+# credentials, so it stays a manual step.
+on:
+  push:
+    tags:
+      - 'v*'
+  # Lets you rehearse the whole thing without cutting a tag; skips the release.
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      CRX_PRIVATE_KEY: ${{ secrets.CRX_PRIVATE_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Installed directly rather than via a third-party action: this job handles
+      # the signing key, so the dependency surface stays as small as it can.
+      - name: Install pnpm
+        run: npm install --global pnpm@11
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: |
+          pkg="$(node -p "require('./package.json').version")"
+          echo "version=$pkg" >> "$GITHUB_OUTPUT"
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            tag="${GITHUB_REF_NAME#v}"
+            if [ "$tag" != "$pkg" ]; then
+              echo "::error::tag ${GITHUB_REF_NAME} does not match package.json version ${pkg}."
+              echo "::error::Bump package.json first - the manifest version comes from it."
+              exit 1
+            fi
+          fi
+
+      # Typecheck plus the full unit suite, including the CRX conformance test.
+      # No browser gate here: that needs a Chromium install, and `pnpm verify`
+      # covers it locally.
+      - name: Check
+        run: pnpm check
+
+      - name: Build and package
+        run: |
+          pnpm zip
+          pnpm zip:firefox
+
+      # An XPI is a zip with a different extension. Unsigned, it installs only in
+      # Firefox Developer Edition, Nightly, or ESR with xpinstall.signatures.required
+      # disabled - release Firefox refuses it.
+      - name: Firefox XPI
+        shell: bash
+        # A block scalar, not a folded one: a `\` line continuation in a plain
+        # YAML scalar collapses onto one line and turns into an escaped space,
+        # which quietly produces a destination filename with a leading space.
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          cp ".output/deqr-${version}-firefox.zip" ".output/deqr-${version}-firefox.xpi"
+
+      # Only when a signing key is configured. Without CRX_PRIVATE_KEY the
+      # release simply ships without a CRX rather than failing.
+      - name: Pack signed CRX
+        if: env.CRX_PRIVATE_KEY != ''
+        shell: bash
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          node scripts/pack-crx.mjs \
+            --zip=".output/deqr-${version}-chrome.zip" \
+            --out=".output/deqr-${version}.crx" \
+            --version="${version}" \
+            --updates=".output/updates.xml" \
+            --codebase="https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}"
+
+      - name: Checksums
+        shell: bash
+        working-directory: .output
+        run: |
+          shopt -s nullglob
+          files=(*.zip *.crx *.xpi *.xml)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "::error::no packages found to checksum"
+            exit 1
+          fi
+          sha256sum "${files[@]}" > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Release notes
+        if: github.ref_type == 'tag'
+        shell: bash
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          if [ -f ".output/deqr-${version}.crx" ]; then
+            crx_section="Grab **\`deqr-${version}.crx\`** and **\`updates.xml\`**, then deploy via
+          \`ExtensionInstallForcelist\` or \`ExtensionSettings\` pointing at that
+          \`updates.xml\`, which carries the download URL and version. This is also the
+          only off-store route that gets automatic updates. A CRX cannot be installed
+          by double-clicking it: Chrome and Edge block off-store installs on Windows
+          and macOS."
+          else
+            crx_section="No CRX in this release, because no signing key is configured for
+          the repository."
+          fi
+          cat > .output/NOTES.md <<EOF
+          ## Which file do I want?
+
+          ### Chrome, Edge, Brave, Opera, Vivaldi - load unpacked
+
+          Grab **\`deqr-${version}-chrome.zip\`** and extract it.
+
+          1. Open \`chrome://extensions\` (or \`edge://extensions\`).
+          2. Turn on **Developer mode**.
+          3. **Load unpacked** -> select the extracted folder.
+
+          Persists across restarts. Chrome will show a "disable developer mode
+          extensions" warning on startup; that is Chrome's nag about unpacked
+          extensions generally, not about deQR.
+
+          Note that **Load unpacked wants the folder, not the \`.crx\`** - the CRX is
+          for policy deployment (below), and using it here would just mean an extra
+          unzip.
+
+          ### Firefox - temporary load
+
+          Grab **\`deqr-${version}-firefox.xpi\`**.
+
+          1. Open \`about:debugging#/runtime/this-firefox\`.
+          2. **Load Temporary Add-on...** -> select the \`.xpi\`.
+
+          This works in ordinary release Firefox and does not care that the file is
+          unsigned. The catch is in the name: temporary add-ons are removed when
+          Firefox restarts.
+
+          For an install that *survives a restart*, Firefox requires a Mozilla
+          signature - that is true even for self-distributed builds, and the
+          \`xpinstall.signatures.required\` override only works in Developer Edition,
+          Nightly and ESR, not in release or beta. So: temporary load for occasional
+          use, or wait for the AMO listing.
+
+          ### Enterprise / managed Chromium
+
+          ${crx_section}
+
+          ## Full file list
+
+          | File | For |
+          | --- | --- |
+          | \`deqr-${version}-chrome.zip\` | **load unpacked** on any Chromium browser; also the Chrome Web Store / Edge / Opera upload |
+          | \`deqr-${version}-firefox.xpi\` | **temporary load** in Firefox |
+          | \`deqr-${version}-firefox.zip\` | addons.mozilla.org upload (same bytes as the .xpi) |
+          | \`deqr-${version}-sources.zip\` | the source archive AMO requires alongside bundled code |
+          | \`deqr-${version}.crx\` + \`updates.xml\` | managed deployment, if built |
+          | \`SHA256SUMS.txt\` | verifying the above |
+
+          ## Verify a download
+
+          \`\`\`sh
+          sha256sum -c SHA256SUMS.txt --ignore-missing
+          \`\`\`
+          EOF
+
+      - name: Publish release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          shopt -s nullglob
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "deQR ${GITHUB_REF_NAME}" \
+            --notes-file .output/NOTES.md \
+            --verify-tag \
+            .output/*.zip .output/*.crx .output/*.xpi .output/*.xml .output/SHA256SUMS.txt
+
+      - name: Upload artifacts (dry runs)
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: deqr-packages
+          path: |
+            .output/*.zip
+            .output/*.crx
+            .output/*.xpi
+            .output/SHA256SUMS.txt

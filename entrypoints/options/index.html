@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- WXT reads manifest.* metas off the entrypoint; setting open_in_tab in
+         wxt.config.ts alone is overridden back to false. The locked-badge grant
+         flow sends people here, so it needs a full tab, not a popup panel. -->
+    <meta name="manifest.open_in_tab" content="true" />
+    <title>deQR - Settings</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>deQR</h1>
+        <p class="tagline">Reveal this QR Code.</p>
+      </header>
+
+      <section>
+        <h2>Image access</h2>
+        <p class="explain">
+          deQR reads QR codes out of the page itself and needs no special access for
+          images hosted by the site you are visiting. Images served from another
+          origin without CORS headers cannot be read at all - the browser blocks it.
+          Add those origins here to let deQR fetch them directly. Nothing is sent
+          anywhere; the fetch happens locally in your browser.
+        </p>
+        <form id="grant-form">
+          <input
+            id="grant-input"
+            type="text"
+            inputmode="url"
+            placeholder="https://images.example.com"
+            aria-label="Origin to allow"
+            required
+          />
+          <button type="submit">Allow</button>
+        </form>
+        <p id="grant-error" class="error" hidden></p>
+        <ul id="granted-list" class="rows"></ul>
+      </section>
+
+      <section>
+        <h2>Scanning</h2>
+        <label class="toggle">
+          <input type="checkbox" id="deep-scan" />
+          <span>
+            <strong>Deep scan</strong>
+            <em>
+              Send every image to the decoder instead of pre-screening for QR finder
+              patterns first. Catches blurred, skewed, and photographed codes that the
+              fast filter misses. Noticeably slower on image-heavy pages.
+            </em>
+          </span>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" id="reveal-secrets" />
+          <span>
+            <strong>Show secrets immediately</strong>
+            <em>
+              Wi-Fi passwords and two-factor seeds are hidden behind a click by
+              default, so they are not exposed to anyone looking at your screen.
+            </em>
+          </span>
+        </label>
+      </section>
+
+      <section>
+        <h2>Disabled sites</h2>
+        <p class="explain">deQR does not scan pages on these hostnames.</p>
+        <form id="site-form">
+          <input
+            id="site-input"
+            type="text"
+            placeholder="example.com"
+            aria-label="Hostname to disable"
+            required
+          />
+          <button type="submit">Add</button>
+        </form>
+        <ul id="site-list" class="rows"></ul>
+      </section>
+
+      <footer>
+        <p>
+          deQR decodes entirely on your machine. It makes no network requests of its
+          own, sends no telemetry, and never transmits a decoded payload.
+        </p>
+      </footer>
+    </main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

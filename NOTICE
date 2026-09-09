@@ -1,0 +1,15 @@
+deQR
+Copyright 2026 Alex Do
+
+https://github.com/alexdonh/deqr
+Licensed under the Apache License, Version 2.0. See LICENSE.
+
+This product bundles third-party software, each under its own licence:
+
+  - zxing-cpp   (Apache License 2.0)  https://github.com/zxing-cpp/zxing-cpp
+  - zxing-wasm  (MIT)                 https://github.com/Sec-ant/zxing-wasm
+  - tldts       (MIT)                 https://github.com/remusao/tldts
+  - Circum Icons (MPL-2.0)            https://circumicons.com
+
+Their copyright notices and full licence texts are in
+THIRD-PARTY-NOTICES.txt, distributed alongside this file.

@@ -1,0 +1,12 @@
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.webp binary
+*.wasm binary
+*.crx binary
+*.xpi binary
+*.zip binary
+
+public/icon/*.png linguist-generated
+pnpm-lock.yaml linguist-generated

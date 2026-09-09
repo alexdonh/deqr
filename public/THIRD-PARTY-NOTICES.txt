@@ -1,0 +1,93 @@
+THIRD-PARTY NOTICES FOR deQR
+============================
+
+deQR bundles the third-party components below. Each is licensed by its own
+authors under its own terms, reproduced here in full where those terms ask for
+it. These notices cover only the components named; for deQR's own licence see
+LICENSE.txt and NOTICE.txt alongside this file.
+
+Update this file when a dependency is added, removed, or changed.
+
+
+--------------------------------------------------------------------------------
+1. zxing-cpp - the barcode decoding engine
+   https://github.com/zxing-cpp/zxing-cpp
+   Licence: Apache License 2.0
+--------------------------------------------------------------------------------
+
+   Compiled, unmodified, into wasm/reader/zxing_reader.wasm by zxing-wasm. This
+   is the code that actually decodes a QR symbol.
+
+   The same licence covers ZXingWasm.cpp from zxing-wasm:
+   https://github.com/Sec-ant/zxing-wasm/blob/main/src/cpp/LICENSE
+
+   deQR is itself under the Apache License 2.0, so that licence text is not
+   repeated here - see LICENSE.txt alongside this file.
+
+
+--------------------------------------------------------------------------------
+2. zxing-wasm - WebAssembly build and JavaScript bindings for zxing-cpp
+   https://github.com/Sec-ant/zxing-wasm
+   Licence: MIT
+--------------------------------------------------------------------------------
+
+MIT License
+
+Copyright (c) 2023 Ze-Zheng Wu
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+--------------------------------------------------------------------------------
+3. tldts - public suffix list lookup
+   https://github.com/remusao/tldts
+   Licence: MIT
+--------------------------------------------------------------------------------
+
+   Used to work out a URL's registrable domain, which the risk panel shows as
+   the destination a link really resolves to.
+
+Copyright (c) 2017 Thomas Parisot, 2018 Rémi Berson
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+associated documentation files (the "Software"), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+--------------------------------------------------------------------------------
+4. Circum Icons - the glyphs in the reveal panel
+   https://circumicons.com  (Klarr Agency)
+   Licence: Mozilla Public License 2.0
+--------------------------------------------------------------------------------
+
+   Path data for a small number of icons is inlined, unedited, in src/icons.ts.
+   That file carries the MPL notice and stays under MPL-2.0; the rest of deQR is
+   Apache-2.0, which MPL section 3.3 permits.
+
+   A copy of the MPL is available at http://mozilla.org/MPL/2.0/. The source
+   form of the file containing this code is src/icons.ts in the deQR source
+   distribution.

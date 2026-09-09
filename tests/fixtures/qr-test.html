@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>deQR - decode fixtures</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 32px;
+        background: #f7f7f9;
+        color: #16181d;
+        font: 14px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      }
+      h1 { font-size: 20px; }
+      h2 { font-size: 15px; margin: 32px 0 4px; }
+      p.note { color: #5c6270; max-width: 70ch; margin: 0 0 16px; }
+      .grid { display: flex; flex-wrap: wrap; gap: 20px; }
+      figure {
+        margin: 0;
+        background: #fff;
+        border: 1px solid #e2e4ea;
+        border-radius: 10px;
+        padding: 12px;
+        width: 200px;
+      }
+      figure img, figure svg, figure canvas { display: block; width: 168px; height: 168px; }
+      figcaption { margin-top: 8px; font-size: 12px; color: #5c6270; }
+      figcaption b { display: block; color: #16181d; font-size: 12.5px; }
+      .expect { color: #8a1c10; }
+    </style>
+  </head>
+  <body>
+    <h1>deQR decode fixtures</h1>
+    <p class="note">
+      Load the unpacked extension, then open this page. A <b>Reveal</b> badge must
+      appear on every image in the first three sections and on none of the images
+      in "Should not be badged". Images are 168px on screen; the originals are
+      larger.
+    </p>
+
+    <h2>Formats - all four must decode</h2>
+    <p class="note">
+      PNG, JPG and WEBP are decoded from canvas pixels. Remote SVG and inline
+      SVG go through the serialize-to-data-URL path, which is the only format
+      with distinct handling. If the JPG and WEBP tiles show as broken images,
+      those fixtures were not generated: they need <code>sips</code> and
+      <code>cwebp</code>, unlike PNG and SVG. Run <code>pnpm fixtures</code>.
+    </p>
+    <div class="grid">
+      <figure>
+        <img src="./img/safe-link.png" alt="PNG QR" />
+        <figcaption><b>PNG</b>https://www.example.com/help</figcaption>
+      </figure>
+      <figure>
+        <img src="./img/safe-link.jpg" alt="JPG QR" />
+        <figcaption><b>JPG</b>same payload, lossy container</figcaption>
+      </figure>
+      <figure>
+        <img src="./img/safe-link.webp" alt="WEBP QR" />
+        <figcaption><b>WEBP</b>same payload - not decodable from raw bytes, so this is the only place it is verified</figcaption>
+      </figure>
+      <figure>
+        <img src="./img/safe-link.svg" alt="SVG QR" />
+        <figcaption><b>SVG via &lt;img&gt;</b>same-origin, so the canvas is not tainted</figcaption>
+      </figure>
+      <figure>
+        <object id="inline-svg-host" type="image/svg+xml" data="./img/safe-link.svg" width="168" height="168"></object>
+        <figcaption><b>Inline &lt;svg&gt;</b>injected below by script, serialized to a data URL</figcaption>
+      </figure>
+      <figure>
+        <canvas id="canvas-qr" width="336" height="336"></canvas>
+        <figcaption><b>&lt;canvas&gt;</b>drawn by script, read directly</figcaption>
+      </figure>
+      <figure>
+        <img id="data-url-qr" alt="data URL QR" />
+        <figcaption><b>data: URL</b>never taints the canvas</figcaption>
+      </figure>
+    </div>
+
+    <h2>Risk levels - check the panel, not just the badge</h2>
+    <div class="grid">
+      <figure>
+        <img src="./img/shortener.png" alt="shortener QR" />
+        <figcaption><b>Shortener</b><span class="expect">caution</span> - destination hidden</figcaption>
+      </figure>
+      <figure>
+        <img src="./img/userinfo.png" alt="userinfo QR" />
+        <figcaption><b>Userinfo spoof</b><span class="expect">danger</span> - must show evil.tld, no Open button</figcaption>
+      </figure>
+      <figure>
+        <img src="./img/homograph.png" alt="homograph QR" />
+        <figcaption><b>Homograph</b><span class="expect">danger</span> - mixed script, shows аpple.com vs xn--</figcaption>
+      </figure>
+      <figure>
+        <img src="./img/javascript.png" alt="javascript QR" />
+        <figcaption><b>javascript:</b><span class="expect">danger</span> - must refuse to open</figcaption>
+      </figure>
+      <figure>
+        <img src="./img/wifi.png" alt="wifi QR" />
+        <figcaption><b>Wi-Fi</b><span class="expect">caution</span> - password masked until clicked</figcaption>
+      </figure>
+      <figure>
+        <img src="./img/otpauth.png" alt="otpauth QR" />
+        <figcaption><b>2FA seed</b><span class="expect">caution</span> - secret masked, warns about enrolment</figcaption>
+      </figure>
+      <figure>
+        <img src="./img/vietqr.png" alt="VietQR" />
+        <figcaption><b>VietQR / EMVCo</b><span class="expect">caution</span> - merchant MY STORE, irreversible</figcaption>
+      </figure>
+      <figure>
+        <img src="./img/plain-text.png" alt="text QR" />
+        <figcaption><b>Plain text</b>no warnings, nothing to open</figcaption>
+      </figure>
+    </div>
+
+    <h2>Sizes</h2>
+    <div class="grid">
+      <figure>
+        <img src="./img/dense.png" alt="dense QR" />
+        <figcaption><b>Dense symbol</b>long URL, high version - the case DETECT_SIZE is set for</figcaption>
+      </figure>
+      <figure>
+        <img src="./img/small.png" alt="small QR" style="width: 84px; height: 84px" />
+        <figcaption><b>Small</b>84px on screen, just above the 40px gate</figcaption>
+      </figure>
+    </div>
+
+    <h2>Should not be badged</h2>
+    <p class="note">
+      A badge on any of these is a false positive: it means the prefilter is too
+      loose and the decoder is being paid for nothing.
+    </p>
+    <div class="grid">
+      <figure>
+        <canvas id="noise" width="300" height="300"></canvas>
+        <figcaption><b>Pixel noise</b>the case that broke the first prefilter</figcaption>
+      </figure>
+      <figure>
+        <canvas id="checkerboard" width="256" height="256"></canvas>
+        <figcaption><b>Checkerboard</b>many runs, wrong ratios</figcaption>
+      </figure>
+      <figure>
+        <canvas id="gradient" width="256" height="256"></canvas>
+        <figcaption><b>Gradient</b>no runs at all</figcaption>
+      </figure>
+      <figure>
+        <canvas id="stripes" width="300" height="200"></canvas>
+        <figcaption
+          ><b>1D barcode</b>stripes, no finder patterns. Note the id is
+          <code>stripes</code>, not <code>barcode</code>: zxing's generated SVG
+          contains <code>&lt;g id="barcode"&gt;</code>, and once inlined it wins
+          getElementById.</figcaption
+        >
+      </figure>
+      <figure>
+        <img src="./img/safe-link.png" alt="tiny" style="width: 24px; height: 24px" />
+        <figcaption><b>24px QR</b>a real code, but below the size gate - no badge by design</figcaption>
+      </figure>
+    </div>
+
+    <h2>Cross-origin, no CORS</h2>
+    <p class="note">
+      This image is served from another origin without CORS headers, so the
+      canvas is tainted and deQR cannot read a single pixel. Expect the amber
+      <b>Allow deQR</b> badge. Clicking it opens the options page; grant that
+      origin, reload, and the badge must become <b>Reveal</b>. This is the one
+      flow that has to be walked by hand.
+    </p>
+    <div class="grid">
+      <figure>
+        <img
+          id="cross-origin"
+          src="https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg"
+          alt="cross-origin QR"
+        />
+        <figcaption><b>upload.wikimedia.org</b>tainted canvas - needs a grant</figcaption>
+      </figure>
+    </div>
+
+    <script type="module">
+      // Everything below builds the non-<img> sources: canvas, inline SVG and a
+      // data: URL, each of which exercises a different rasterization path.
+      const svgText = await (await fetch('./img/safe-link.svg')).text();
+
+      // Inline <svg>: parsed into the document, so scan.ts serializes it.
+      const host = document.getElementById('inline-svg-host');
+      const parsed = new DOMParser().parseFromString(svgText, 'image/svg+xml');
+      const svg = parsed.documentElement;
+      svg.setAttribute('width', '168');
+      svg.setAttribute('height', '168');
+      host.replaceWith(svg);
+
+      // data: URL image.
+      document.getElementById('data-url-qr').src =
+        `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgText)}`;
+
+      // Canvas holding a real QR.
+      const img = new Image();
+      img.onload = () => {
+        document.getElementById('canvas-qr').getContext('2d').drawImage(img, 0, 0, 336, 336);
+      };
+      img.src = './img/safe-link.png';
+
+      const fill = (id, paint) => {
+        const c = document.getElementById(id);
+        paint(c.getContext('2d'), c.width, c.height);
+      };
+
+      fill('noise', (ctx, w, h) => {
+        const data = ctx.createImageData(w, h);
+        for (let i = 0; i < data.data.length; i += 4) {
+          const v = (Math.random() * 256) | 0;
+          data.data[i] = data.data[i + 1] = data.data[i + 2] = v;
+          data.data[i + 3] = 255;
+        }
+        ctx.putImageData(data, 0, 0);
+      });
+
+      fill('checkerboard', (ctx, w, h) => {
+        for (let y = 0; y < h; y += 4) {
+          for (let x = 0; x < w; x += 4) {
+            ctx.fillStyle = ((x + y) / 4) % 2 ? '#fff' : '#000';
+            ctx.fillRect(x, y, 4, 4);
+          }
+        }
+      });
+
+      fill('gradient', (ctx, w, h) => {
+        const g = ctx.createLinearGradient(0, 0, w, h);
+        g.addColorStop(0, '#000');
+        g.addColorStop(1, '#fff');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, w, h);
+      });
+
+      fill('stripes', (ctx, w, h) => {
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = '#000';
+        for (let x = 10; x < w - 10; ) {
+          const bar = 1 + ((Math.random() * 4) | 0);
+          ctx.fillRect(x, 10, bar, h - 20);
+          x += bar + 1 + ((Math.random() * 4) | 0);
+        }
+      });
+    </script>
+  </body>
+</html>

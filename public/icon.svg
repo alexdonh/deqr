@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" width="160" height="160" role="img" aria-label="deQR">
+  <title>deQR</title>
+  <rect width="160" height="160" rx="34" fill="#1F2937"/>
+  <g fill="none" stroke="#FFFFFF" stroke-width="8">
+    <rect x="26" y="26" width="40" height="40" rx="5"/>
+    <rect x="94" y="26" width="40" height="40" rx="5"/>
+    <rect x="26" y="94" width="40" height="40" rx="5"/>
+  </g>
+  <g fill="#FFFFFF">
+    <rect x="40" y="40" width="12" height="12"/>
+    <rect x="108" y="40" width="12" height="12"/>
+    <rect x="40" y="108" width="12" height="12"/>
+  </g>
+  <g fill="#2DD4BF">
+    <rect x="94" y="94" width="18" height="18" rx="3"/>
+    <rect x="120" y="96" width="14" height="14" rx="3"/>
+    <rect x="96" y="120" width="14" height="14" rx="3"/>
+    <rect x="122" y="122" width="8" height="8" rx="2"/>
+  </g>
+</svg>

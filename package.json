@@ -1,0 +1,41 @@
+{
+  "name": "deqr",
+  "version": "0.1.0",
+  "description": "Reveal this QR Code - decode QR images on any page and inspect the payload before you trust it.",
+  "license": "Apache-2.0",
+  "author": "Alex Do",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alexdonh/deqr.git"
+  },
+  "homepage": "https://github.com/alexdonh/deqr",
+  "bugs": "https://github.com/alexdonh/deqr/issues",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "dev:firefox": "wxt -b firefox",
+    "build": "wxt build",
+    "build:firefox": "wxt build -b firefox",
+    "zip": "wxt zip",
+    "zip:firefox": "wxt zip -b firefox",
+    "compile": "tsc --noEmit",
+    "test": "node scripts/make-fixtures.mjs --quiet && vitest run",
+    "sync-wasm": "node scripts/sync-wasm.mjs",
+    "postinstall": "node scripts/sync-wasm.mjs && wxt prepare",
+    "fixtures": "node scripts/make-fixtures.mjs --force",
+    "verify": "node scripts/make-fixtures.mjs --quiet && node scripts/verify-browser.mjs",
+    "verify:perf": "node scripts/make-fixtures.mjs --quiet && node scripts/verify-browser.mjs perf-test.html",
+    "check": "node scripts/sync-wasm.mjs && wxt prepare && tsc --noEmit && pnpm test"
+  },
+  "dependencies": {
+    "tldts": "^7.4.12",
+    "zxing-wasm": "^3.1.3"
+  },
+  "devDependencies": {
+    "@types/node": "^26.5.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.4",
+    "wxt": "^0.21.4"
+  }
+}

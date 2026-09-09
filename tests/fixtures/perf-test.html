@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>deQR - performance gate</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 24px;
+        background: #f7f7f9;
+        color: #16181d;
+        font: 14px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      }
+      h1 { font-size: 19px; margin: 0 0 4px; }
+      p.note { color: #5c6270; max-width: 78ch; }
+      #panel {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: #16181d;
+        color: #eceef2;
+        border-radius: 10px;
+        padding: 14px 16px;
+        margin: 16px 0 24px;
+        font: 12.5px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      #panel b { color: #7fd1ff; }
+      .wall { display: flex; flex-wrap: wrap; gap: 6px; }
+      .wall img, .wall canvas { width: 96px; height: 96px; display: block; border-radius: 4px; }
+      .marker { outline: 3px solid #2dd4bf; outline-offset: 2px; }
+    </style>
+  </head>
+  <body>
+    <h1>deQR performance gate</h1>
+    <p class="note">
+      500 images, of which exactly 3 are real QR codes (outlined in teal). Open
+      DevTools -> Performance, record while scrolling to the bottom, then read the
+      counters below.
+    </p>
+
+    <div id="panel">
+      <div>images on page: <b id="count">...</b></div>
+      <div>real QR codes: <b>3</b> - all three must end up badged</div>
+      <div>
+        pass criteria:
+        <b
+          >stage-1 p95 &lt; 1.5ms | exactly 3 messages to the background | no long
+          task &gt; 50ms while scrolling</b
+        >
+      </div>
+      <div id="results">scroll to the bottom, then press Measure.</div>
+      <button id="measure" type="button">Measure</button>
+      <button id="reset" type="button">Reset counters</button>
+    </div>
+
+    <p class="note">
+      The number that matters is how many images reach the background. The
+      prefilter exists so that number is 3 and not 500: every crossing is a
+      serialize-and-copy, since Chrome's runtime messaging is JSON. If the count
+      is much above 3, the ratio tolerance is too loose. If fewer than 3 images
+      end up badged, the filter is too tight, which is worse.
+    </p>
+
+    <div class="wall" id="wall"></div>
+
+    <script type="module">
+      const WALL = document.getElementById('wall');
+      const TOTAL = 500;
+      // Three real QR codes at early, middle and past-the-fold positions.
+      // Three *different* images on purpose: the scanner caches by URL, so three
+      // copies of one file would decode once and tell us nothing about how many
+      // decodes a page really costs.
+      const QR_AT = new Map([
+        [7, './img/safe-link.png'],
+        [240, './img/shortener.png'],
+        [488, './img/plain-text.png'],
+      ]);
+
+      // Decoys are drawn, not fetched, so the page has no network dependency and
+      // every run is identical apart from the noise seed.
+      function decoy(index) {
+        const canvas = document.createElement('canvas');
+        canvas.width = canvas.height = 192;
+        const ctx = canvas.getContext('2d');
+        const kind = index % 4;
+        if (kind === 0) {
+          // High-frequency noise - the case that defeats a horizontal-only
+          // filter. Drawn as small rects rather than per-pixel ImageData:
+          // 125 canvases x 36k Math.random() calls stalls the page for minutes
+          // before deQR even starts, which measures the fixture, not the funnel.
+          ctx.fillStyle = '#fff';
+          ctx.fillRect(0, 0, 192, 192);
+          ctx.fillStyle = '#111';
+          for (let i = 0; i < 900; i++) {
+            ctx.fillRect(
+              (Math.random() * 190) | 0,
+              (Math.random() * 190) | 0,
+              1 + ((Math.random() * 3) | 0),
+              1 + ((Math.random() * 3) | 0),
+            );
+          }
+        } else if (kind === 1) {
+          const g = ctx.createLinearGradient(0, 0, 192, 192);
+          g.addColorStop(0, `hsl(${index % 360} 70% 40%)`);
+          g.addColorStop(1, '#fff');
+          ctx.fillStyle = g;
+          ctx.fillRect(0, 0, 192, 192);
+        } else if (kind === 2) {
+          // Blocky UI-screenshot lookalike: lots of hard edges and runs.
+          ctx.fillStyle = '#fff';
+          ctx.fillRect(0, 0, 192, 192);
+          ctx.fillStyle = '#222';
+          for (let i = 0; i < 60; i++) {
+            ctx.fillRect(
+              (Math.random() * 180) | 0,
+              (Math.random() * 180) | 0,
+              1 + ((Math.random() * 14) | 0),
+              1 + ((Math.random() * 6) | 0),
+            );
+          }
+        } else {
+          ctx.fillStyle = '#fff';
+          ctx.fillRect(0, 0, 192, 192);
+          ctx.fillStyle = '#000';
+          for (let x = 6; x < 186; ) {
+            const bar = 1 + ((Math.random() * 5) | 0);
+            ctx.fillRect(x, 6, bar, 180);
+            x += bar + 1 + ((Math.random() * 5) | 0);
+          }
+        }
+        return canvas;
+      }
+
+      const frag = document.createDocumentFragment();
+      for (let i = 0; i < TOTAL; i++) {
+        if (QR_AT.has(i)) {
+          const img = document.createElement('img');
+          img.src = QR_AT.get(i);
+          img.alt = `real QR ${i}`;
+          img.className = 'marker';
+          frag.append(img);
+        } else {
+          frag.append(decoy(i));
+        }
+      }
+      WALL.append(frag);
+      document.getElementById('count').textContent = String(TOTAL);
+
+      // deQR's content script runs in an isolated world, but the Performance
+      // timeline belongs to the document and is shared, so its marks are readable
+      // from here.
+      const percentile = (sorted, p) =>
+        sorted.length ? sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))] : 0;
+
+      document.getElementById('measure').addEventListener('click', () => {
+        const stage1 = performance
+          .getEntriesByName('deqr:stage1')
+          .map((e) => e.duration)
+          .sort((a, b) => a - b);
+        const crossings = performance.getEntriesByName('deqr:decode-request').length;
+        const badges = performance.getEntriesByName('deqr:badge').length;
+        const host = document.querySelectorAll('[data-deqr]').length;
+        const total = stage1.reduce((a, b) => a + b, 0);
+
+        const verdict = (ok) => (ok ? 'PASS' : 'FAIL');
+        document.getElementById('results').innerHTML = '';
+        for (const line of [
+          `stage-1 evaluated:  ${stage1.length} images`,
+          `stage-1 p50:        ${percentile(stage1, 0.5).toFixed(3)} ms`,
+          `stage-1 p95:        ${percentile(stage1, 0.95).toFixed(3)} ms  ${verdict(percentile(stage1, 0.95) < 1.5)}`,
+          `stage-1 max:        ${(stage1.at(-1) ?? 0).toFixed(3)} ms`,
+          `stage-1 total:      ${total.toFixed(1)} ms of main thread`,
+          `boundary crossings: ${crossings}  ${verdict(crossings === 3)} (expected exactly 3)`,
+          `reveal badges:      ${badges}  ${verdict(badges === 3)} (expected exactly 3)`,
+          `deQR host present:  ${host === 1 ? 'yes' : 'no'}`,
+        ]) {
+          const div = document.createElement('div');
+          div.textContent = line;
+          document.getElementById('results').append(div);
+        }
+      });
+
+      document.getElementById('reset').addEventListener('click', () => {
+        performance.clearMeasures();
+        performance.clearMarks();
+        document.getElementById('results').textContent = 'counters cleared - reload to re-scan.';
+      });
+    </script>
+  </body>
+</html>
