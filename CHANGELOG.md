@@ -2,6 +2,10 @@
 
 
 
+## 0.1.2 - 2026-09-11
+
+- feat: add WhatsApp and cryptocurrency classification
+
 ## 0.1.1 - 2026-09-10
 
 - feat: add dark/light theme options

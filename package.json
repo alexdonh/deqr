@@ -1,6 +1,6 @@
 {
   "name": "deqr",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Reveal this QR Code - decode QR images on any page and inspect the payload before you trust it.",
   "license": "Apache-2.0",
   "author": "Alex Do",
