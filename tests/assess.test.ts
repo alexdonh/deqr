@@ -132,6 +132,67 @@ describe('caution - openable, but never on the first click', () => {
     expect(result.payload.kind).toBe('sms');
     expect(result.reasons.map((r) => r.code)).toContain('prefilled-message');
   });
+
+  it.each([
+    ['https://wa.me/15551234567?text=Hello', '15551234567'],
+    ['https://api.whatsapp.com/send?phone=15551234567&text=Hello', '15551234567'],
+    ['whatsapp://send?phone=15551234567&text=Hello', '15551234567'],
+  ])('reads the number and message out of %s', (text, number) => {
+    const result = check(text);
+    expect(result.payload.kind).toBe('whatsapp');
+    expect(result.payload.fields.find((f) => f.name === 'Number')?.value).toBe(number);
+    expect(result.payload.fields.find((f) => f.name === 'Message')?.value).toBe('Hello');
+    expect(codes(text)).toContain('prefilled-message');
+    // Starting a chat is a normal thing to want to do.
+    expect(result.openable).toBe(true);
+  });
+
+  it('warns that a group invite exposes your number', () => {
+    const result = check('https://chat.whatsapp.com/ABCdef123456');
+    expect(result.payload.kind).toBe('whatsapp');
+    expect(result.reasons.map((r) => r.code)).toContain('group-invite');
+  });
+});
+
+describe('cryptocurrency payloads', () => {
+  it.each([
+    ['bitcoin:bc1qexampleaddress', 'Bitcoin'],
+    ['bitcoincash:qr95sy3j9xwd2ap32xkykttr4cvcu7as4y', 'Bitcoin Cash'],
+    ['dash:XnZQhV3AUQVbTgJhCiE1cA1qMQTXRjQGnP', 'Dash'],
+    ['litecoin:LcHK8Ss2GPZWcNVJ1GeE2mhmnVwKvsgKAX', 'Litecoin'],
+    ['ethereum:0x1234567890abcdef', 'Ethereum'],
+    ['web+stellar:pay?destination=GABC', 'Stellar'],
+  ])('names the network for %s', (text, network) => {
+    const result = check(text);
+    expect(result.payload.kind).toBe('crypto');
+    expect(result.payload.fields.find((f) => f.name === 'Network')?.value).toBe(network);
+    // Payment is always a caution, and deQR never opens a wallet for you.
+    expect(codes(text)).toContain('payment');
+    expect(result.openable).toBe(false);
+  });
+
+  it('reads BIP-21 amount, label and message', () => {
+    const { payload } = check('bitcoin:bc1qexample?amount=0.05&label=Cafe&message=Table%204');
+    const field = (name: string) => payload.fields.find((f) => f.name === name)?.value;
+    expect(field('Address')).toBe('bc1qexample');
+    expect(field('Amount')).toBe('0.05');
+    expect(field('Label')).toBe('Cafe');
+    expect(field('Message')).toBe('Table 4');
+  });
+
+  it('separates the token contract from the recipient in an EIP-681 call', () => {
+    // The address in the path is the token, not the payee. Showing one "Address"
+    // for both would put the wrong destination in front of the user.
+    const { payload } = check(
+      'ethereum:0xTOKEN@1/transfer?address=0xRECIPIENT&uint256=1e18',
+    );
+    const field = (name: string) => payload.fields.find((f) => f.name === name)?.value;
+    expect(field('Token contract')).toBe('0xTOKEN');
+    expect(field('Function')).toBe('transfer');
+    expect(field('Recipient')).toBe('0xRECIPIENT');
+    expect(field('Chain ID')).toBe('1');
+    expect(field('Amount')).toBe('1e18');
+  });
 });
 
 describe('legitimate internationalized domains are not treated as attacks', () => {

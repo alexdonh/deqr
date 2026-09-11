@@ -11,6 +11,7 @@ export type PayloadKind =
   | 'mailto'
   | 'tel'
   | 'sms'
+  | 'whatsapp'
   | 'wifi'
   | 'contact'
   | 'geo'
@@ -239,17 +240,117 @@ function classifyEmv(tlv: Map<string, string>): Payload {
   return { kind: 'emv', label: 'Payment request', fields };
 }
 
-const CRYPTO_SCHEMES = new Set([
-  'bitcoin',
-  'bitcoincash',
-  'ethereum',
-  'litecoin',
-  'dogecoin',
-  'monero',
-  'ripple',
-  'solana',
-  'tron',
+// Maps crypto URI schemes to display names.
+const CRYPTO_NETWORKS: Record<string, string> = {
+  bitcoin: 'Bitcoin',
+  bitcoincash: 'Bitcoin Cash',
+  bitcoinsv: 'Bitcoin SV',
+  bsv: 'Bitcoin SV',
+  litecoin: 'Litecoin',
+  dogecoin: 'Dogecoin',
+  dash: 'Dash',
+  ethereum: 'Ethereum',
+  ethereumclassic: 'Ethereum Classic',
+  monero: 'Monero',
+  zcash: 'Zcash',
+  ripple: 'XRP',
+  xrp: 'XRP',
+  stellar: 'Stellar',
+  'web+stellar': 'Stellar',
+  cardano: 'Cardano',
+  'web+cardano': 'Cardano',
+  solana: 'Solana',
+  tron: 'TRON',
+  polkadot: 'Polkadot',
+  algorand: 'Algorand',
+  cosmos: 'Cosmos',
+  tezos: 'Tezos',
+  nano: 'Nano',
+  filecoin: 'Filecoin',
+  ton: 'TON',
+  near: 'NEAR',
+  bnb: 'BNB',
+  avalanche: 'Avalanche',
+  polygon: 'Polygon',
+  matic: 'Polygon',
+  decred: 'Decred',
+  ravencoin: 'Ravencoin',
+  digibyte: 'DigiByte',
+  groestlcoin: 'Groestlcoin',
+  peercoin: 'Peercoin',
+  namecoin: 'Namecoin',
+  verge: 'Verge',
+  kaspa: 'Kaspa',
+  iota: 'IOTA',
+};
+
+function classifyCrypto(scheme: string, network: string, text: string): Payload {
+  const [target, query] = text.slice(scheme.length + 1).split('?');
+  const params = new URLSearchParams(query ?? '');
+  // EIP-681: `ethereum:[pay-]<address>@<chainId>[/<function>]`
+  const [address, afterAt] = (target ?? '').replace(/^pay-/i, '').split('@');
+  const [chainId, fn] = (afterAt ?? '').split('/');
+
+  const fields: Field[] = [{ name: 'Network', value: network }];
+  // With a contract call the address in the path is the token, and the money
+  // goes to the `address` parameter. Naming both stops them being read as one.
+  fields.push({ name: fn ? 'Token contract' : 'Address', value: address ?? '' });
+  if (fn) {
+    fields.push({ name: 'Function', value: fn });
+    const recipient = params.get('address');
+    if (recipient) fields.push({ name: 'Recipient', value: recipient });
+  }
+  if (chainId) fields.push({ name: 'Chain ID', value: chainId });
+  // BIP-21 says `amount`; EIP-681 uses `value` in wei and `uint256` for tokens.
+  const amount = params.get('amount') ?? params.get('value') ?? params.get('uint256');
+  if (amount) fields.push({ name: 'Amount', value: amount });
+  for (const [key, name] of [
+    ['label', 'Label'],
+    ['message', 'Message'],
+  ] as const) {
+    const value = params.get(key);
+    if (value) fields.push({ name, value });
+  }
+  return { kind: 'crypto', label: `${network} transfer`, fields };
+}
+
+/** Hosts whose whole purpose is to open a WhatsApp chat. */
+const WHATSAPP_HOSTS = new Set([
+  'wa.me',
+  'api.whatsapp.com',
+  'web.whatsapp.com',
+  'chat.whatsapp.com',
 ]);
+
+/**
+ * WhatsApp chat links show number and message as fields.
+ */
+function classifyWhatsapp(url: UrlParts): Payload {
+  const params = new URLSearchParams(url.rest.split('?')[1] ?? '');
+  const path = decodeURIComponent(url.rest.split('?')[0]!.replace(/^\//, ''));
+
+  if (url.asciiHost === 'chat.whatsapp.com') {
+    return {
+      kind: 'whatsapp',
+      label: 'WhatsApp group invite',
+      fields: [{ name: 'Group invite', value: path }],
+      url,
+    };
+  }
+
+  const fields: Field[] = [];
+  const number = params.get('phone') ?? path;
+  if (number) fields.push({ name: 'Number', value: number });
+  const message = params.get('text');
+  if (message) fields.push({ name: 'Message', value: message });
+  return { kind: 'whatsapp', label: 'WhatsApp message', fields, url };
+}
+
+/** An https link that is really a WhatsApp chat gets the chat panel, not a bare link. */
+function fromUrl(url: UrlParts): Payload {
+  if (WHATSAPP_HOSTS.has(url.asciiHost)) return classifyWhatsapp(url);
+  return { kind: 'url', label: 'Link', fields: [{ name: 'Address', value: url.href }], url };
+}
 
 export function classify(text: string): Payload {
   const trimmed = text.trim();
@@ -327,37 +428,29 @@ export function classify(text: string): Payload {
     return { kind: 'upi', label: 'Payment request', fields, url };
   }
 
-  if (scheme && CRYPTO_SCHEMES.has(scheme)) {
-    const withoutScheme = trimmed.slice(scheme.length + 1);
-    const [address, query] = withoutScheme.split('?');
-    const params = new URLSearchParams(query ?? '');
-    const fields: Field[] = [
-      { name: 'Network', value: scheme },
-      { name: 'Address', value: address ?? '' },
-    ];
-    const amount = params.get('amount') ?? params.get('value');
-    if (amount) fields.push({ name: 'Amount', value: amount });
-    return { kind: 'crypto', label: 'Cryptocurrency transfer', fields };
+  if (scheme === 'whatsapp') {
+    const params = new URLSearchParams(trimmed.split('?')[1] ?? '');
+    const fields: Field[] = [];
+    const number = params.get('phone');
+    if (number) fields.push({ name: 'Number', value: number });
+    const message = params.get('text');
+    if (message) fields.push({ name: 'Message', value: message });
+    return { kind: 'whatsapp', label: 'WhatsApp message', fields };
+  }
+
+  if (scheme && CRYPTO_NETWORKS[scheme]) {
+    return classifyCrypto(scheme, CRYPTO_NETWORKS[scheme], trimmed);
   }
 
   if (scheme) {
     const url = parseUrl(trimmed);
-    if (url) {
-      return { kind: 'url', label: 'Link', fields: [{ name: 'Address', value: url.href }], url };
-    }
+    if (url) return fromUrl(url);
   }
 
   // Bare hostnames are extremely common on printed and on-page QR codes.
   if (/^(?:www\.)?[a-z0-9\u00a1-\uffff][a-z0-9.\-\u00a1-\uffff]*\.[a-z\u00a1-\uffff]{2,}(?:[/?#].*)?$/i.test(trimmed)) {
     const url = parseUrl(`http://${trimmed}`);
-    if (url) {
-      return {
-        kind: 'url',
-        label: 'Link',
-        fields: [{ name: 'Address', value: url.href }],
-        url: { ...url, scheme: 'http', href: url.href },
-      };
-    }
+    if (url) return fromUrl(url);
   }
 
   return { kind: 'text', label: 'Plain text', fields: [{ name: 'Text', value: trimmed }] };

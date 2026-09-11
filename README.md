@@ -52,6 +52,36 @@ deQR** badge instead; grant that one origin on the options page and the
 background will fetch and decode it. deQR ships with **no host permissions** -
 only optional ones you grant per origin.
 
+### What it understands
+
+Fourteen payload kinds, each with its own panel. Anything unrecognized falls
+back to plain text rather than being guessed at.
+
+| Kind | Recognized from |
+| --- | --- |
+| Link | any URL, plus bare hostnames like `example.com/page` |
+| Email | `mailto:`, with subject, body, cc and bcc |
+| Phone | `tel:` |
+| Text message | `sms:`, `smsto:` |
+| WhatsApp | `wa.me`, `api.whatsapp.com`, `web.whatsapp.com`, `whatsapp:`, and `chat.whatsapp.com` group invites |
+| Wi-Fi | `WIFI:` |
+| Contact card | `BEGIN:VCARD`, `MECARD:` |
+| Calendar event | `BEGIN:VCALENDAR`, `BEGIN:VEVENT` |
+| Location | `geo:` |
+| Two-factor seed | `otpauth://totp`, `otpauth://hotp` |
+| Cryptocurrency | 40 URI schemes covering 35 networks - see `CRYPTO_NETWORKS` in `src/classify.ts` |
+| Payment request | EMVCo merchant QR: VietQR, PromptPay, PIX and the rest of the family |
+| UPI | `upi://pay` |
+| Plain text | everything else |
+
+Two of these are worth a note. Cryptocurrency covers Bitcoin, Bitcoin Cash,
+Ethereum, Litecoin, Dash, Dogecoin, Monero, Zcash, XRP, Solana and about
+twenty-five more; the list is plain data, so a coin with its own URI scheme is
+one line. Most follow BIP-21, and Ethereum's EIP-681 is handled separately
+because a token transfer puts the *contract* address in the path and the real
+recipient in a query parameter - showing one "Address" for both would put the
+wrong destination in front of you.
+
 ## Security model
 
 The payload was written by someone you have no relationship with, so treat it as

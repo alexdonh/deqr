@@ -254,6 +254,26 @@ function assessNonUrl(payload: Payload, reasons: Reason[]): void {
       }
       break;
     }
+    case 'whatsapp': {
+      if (payload.fields.some((f) => f.name === 'Group invite')) {
+        reasons.push({
+          code: 'group-invite',
+          title: 'Joins a WhatsApp group',
+          detail:
+            'Joining shows your phone number and profile to everyone already in the group, and there is no way to tell from the invite who that is.',
+        });
+        break;
+      }
+      if (payload.fields.some((f) => f.name === 'Message' && f.value)) {
+        reasons.push({
+          code: 'prefilled-message',
+          title: 'Opens a chat with a pre-written message',
+          detail:
+            'Both the recipient and the message text were chosen by whoever made this QR code. Check the number below - starting the chat reveals your number to it.',
+        });
+      }
+      break;
+    }
     case 'mailto': {
       if (payload.fields.some((f) => f.name === 'Body' && f.value)) {
         reasons.push({
@@ -298,7 +318,7 @@ export function assess(payload: Payload, text: string): Assessment {
 
   // tel:/sms:/geo: are handled by the OS, not fetched, so classify() leaves them
   // without a UrlParts. They are still openable; kind is the authority here.
-  const OPENABLE_KINDS = new Set(['url', 'mailto', 'tel', 'sms', 'geo']);
+  const OPENABLE_KINDS = new Set(['url', 'mailto', 'tel', 'sms', 'geo', 'whatsapp']);
   const scheme = payload.url?.scheme;
   const openable =
     !hasDanger &&
