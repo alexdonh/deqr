@@ -2,6 +2,11 @@
 
 
 
+## 0.1.3 - 2026-09-14
+
+- fix: update browser ID and minimum version in wxt.config.ts
+- feat: implement i18n support
+
 ## 0.1.2 - 2026-09-11
 
 - feat: add WhatsApp and cryptocurrency classification
