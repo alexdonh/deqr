@@ -258,3 +258,24 @@ describe('sanitizeForDisplay', () => {
     expect(sanitizeForDisplay('a\nb\tc')).toBe('a\nb\tc');
   });
 });
+
+describe('MATMSG', () => {
+  it('reads the same as the mailto it means', () => {
+    const result = check('MATMSG:TO:a@b.com;SUB:Invoice;BODY:Pay here;;');
+    expect(result.payload.kind).toBe('mailto');
+    expect(result.payload.fields).toEqual([
+      { key: 'fieldTo', value: 'a@b.com' },
+      { key: 'fieldSubject', value: 'Invoice' },
+      { key: 'fieldBody', value: 'Pay here' },
+    ]);
+    expect(result.payload.url?.href).toBe('mailto:a%40b.com?subject=Invoice&body=Pay+here');
+    expect(result.openable).toBe(true);
+    // A body someone else wrote is the whole reason to look before sending.
+    expect(result.reasons.map((r) => r.code)).toContain('prefilled-message');
+  });
+
+  it('keeps escaped separators inside a field', () => {
+    const result = check('MATMSG:TO:a@b.com;SUB:Re\\: hi\\; ok;;');
+    expect(result.payload.fields).toContainEqual({ key: 'fieldSubject', value: 'Re: hi; ok' });
+  });
+});

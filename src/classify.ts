@@ -169,6 +169,28 @@ function classifyMecard(text: string): Payload {
   return { kind: 'contact', labelKey: 'payloadContact', fields };
 }
 
+function classifyMatmsg(text: string): Payload {
+  const entries = new Map<string, string>();
+  for (const part of splitFields(text.slice('MATMSG:'.length))) {
+    const colon = part.indexOf(':');
+    if (colon <= 0) continue;
+    entries.set(part.slice(0, colon).toUpperCase(), unescape(part.slice(colon + 1)));
+  }
+  const params = new URLSearchParams();
+  for (const [tag, param] of [
+    ['SUB', 'subject'],
+    ['BODY', 'body'],
+    ['CC', 'cc'],
+    ['BCC', 'bcc'],
+  ] as const) {
+    const value = entries.get(tag);
+    if (value) params.set(param, value);
+  }
+  const query = params.toString();
+  const to = encodeURIComponent(entries.get('TO') ?? '');
+  return classify(`mailto:${to}${query ? `?${query}` : ''}`);
+}
+
 /** vCard / iCalendar: `KEY;PARAM:value` per unfolded line. */
 function classifyIcalLike(
   text: string,
@@ -382,6 +404,7 @@ export function classify(text: string): Payload {
 
   if (upper.startsWith('WIFI:')) return classifyWifi(trimmed);
   if (upper.startsWith('MECARD:')) return classifyMecard(trimmed);
+  if (upper.startsWith('MATMSG:')) return classifyMatmsg(trimmed);
   if (upper.startsWith('BEGIN:VCARD')) return classifyIcalLike(trimmed, 'contact', 'payloadContact');
   if (upper.startsWith('BEGIN:VCALENDAR') || upper.startsWith('BEGIN:VEVENT')) {
     return classifyIcalLike(trimmed, 'calendar', 'payloadCalendar');
