@@ -204,6 +204,7 @@ function covers(rect: DOMRect, at: { x: number; y: number }): boolean {
 
 export class Ui {
   private readonly root: ShadowRoot;
+  private readonly host: HTMLElement;
   private readonly layer: HTMLDivElement;
   private readonly tracked: Tracked[] = [];
   private scrim?: HTMLDivElement;
@@ -212,9 +213,12 @@ export class Ui {
   private pointer?: { x: number; y: number };
   /** The badge currently revealed by hover or focus, if any. */
   private active?: Tracked;
+  /** When a badge was last opened from a press, so the trailing click is dropped. */
+  private pressed = 0;
 
   constructor(private readonly settings: Settings) {
     const host = make('div');
+    this.host = host;
     host.setAttribute('data-deqr', '');
     // Closed: the page cannot reach in via element.shadowRoot.
     this.root = host.attachShadow({ mode: 'closed' });
@@ -251,6 +255,35 @@ export class Ui {
       { passive: true },
     );
 
+    addEventListener(
+      'pointerdown',
+      (event) => {
+        if (event.target !== this.host) return;
+        event.stopPropagation();
+        const badge = this.root
+          .elementFromPoint(event.clientX, event.clientY)
+          ?.closest<HTMLButtonElement>('.badge');
+        if (!badge || event.button !== 0) return;
+        // Also stops the focus shift, which reads as "left the sidebar" too.
+        event.preventDefault();
+        badge.click();
+        // The real click still arrives if the badge survives; it is a duplicate.
+        this.pressed = performance.now();
+      },
+      { capture: true },
+    );
+    for (const type of ['mousedown', 'touchstart'] as const) {
+      addEventListener(
+        type,
+        (event) => {
+          if (event.target === this.host) event.stopPropagation();
+        },
+        { capture: true },
+      );
+    }
+    // Bubble phase: our own handlers have run, the page does not need the click.
+    this.layer.addEventListener('click', (event) => event.stopPropagation());
+
     const reposition = () => this.schedule();
     addEventListener('scroll', reposition, { passive: true, capture: true });
     addEventListener('resize', reposition, { passive: true });
@@ -269,6 +302,7 @@ export class Ui {
       badge.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();
+        if (this.duplicate()) return;
         void browser.runtime.sendMessage({ type: 'request-grant', origin: outcome.origin });
       });
     } else {
@@ -277,6 +311,7 @@ export class Ui {
       badge.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();
+        if (this.duplicate()) return;
         this.open(outcome.result);
       });
     }
@@ -292,6 +327,13 @@ export class Ui {
     badge.addEventListener('focus', () => this.reveal(tracked));
     badge.addEventListener('blur', () => this.conceal(tracked));
     this.schedule();
+  }
+
+  /** True for the click a press already handled; keyboard clicks have no press. */
+  private duplicate(): boolean {
+    const dup = performance.now() - this.pressed < 1000;
+    this.pressed = 0;
+    return dup;
   }
 
   private reveal(tracked: Tracked): void {
@@ -360,6 +402,7 @@ export class Ui {
     });
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        event.stopPropagation();
         this.close();
         removeEventListener('keydown', onKey, true);
       }
