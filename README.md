@@ -59,13 +59,13 @@ back to plain text rather than being guessed at.
 
 | Kind | Recognized from |
 | --- | --- |
-| Link | any URL, plus bare hostnames like `example.com/page` |
-| Email | `mailto:`, with subject, body, cc and bcc |
+| Link | any URL, plus bare hostnames like `example.com/page` and `MEBKM:` bookmarks |
+| Email | `mailto:` and `MATMSG:`, with subject, body, cc and bcc |
 | Phone | `tel:` |
-| Text message | `sms:`, `smsto:` |
+| Text message | `sms:`, `smsto:`, `mms:`, `mmsto:` |
 | WhatsApp | `wa.me`, `api.whatsapp.com`, `web.whatsapp.com`, `whatsapp:`, and `chat.whatsapp.com` group invites |
 | Wi-Fi | `WIFI:` |
-| Contact card | `BEGIN:VCARD`, `MECARD:` |
+| Contact card | `BEGIN:VCARD`, `MECARD:`, `BIZCARD:` |
 | Calendar event | `BEGIN:VCALENDAR`, `BEGIN:VEVENT` |
 | Location | `geo:` |
 | Two-factor seed | `otpauth://totp`, `otpauth://hotp` |
