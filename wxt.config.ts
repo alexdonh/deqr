@@ -50,9 +50,10 @@ export default defineConfig({
       ? {
           browser_specific_settings: {
             gecko: {
-              id: 'deqr@sharering.network',
-              // optional_host_permissions landed in 127.
-              strict_min_version: '127.0',
+              // Permanent
+              id: 'deqr@alexdonh.github.io',
+              strict_min_version: '128.0',
+              data_collection_permissions: { required: ['none'] },
             },
           },
         }
