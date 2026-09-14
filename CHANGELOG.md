@@ -2,6 +2,10 @@
 
 
 
+## 0.1.4 - 2026-09-14
+
+- feat: improve UI interaction handling
+
 ## 0.1.3 - 2026-09-14
 
 - fix: update browser ID and minimum version in wxt.config.ts
