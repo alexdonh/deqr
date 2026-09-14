@@ -1,0 +1,290 @@
+{
+  "extDescription": {
+    "message": "Xem trước mã QR này - giải mã ảnh QR trên bất kỳ trang web nào và kiểm tra nội dung trước khi truy cập."
+  },
+  "extActionTitle": { "message": "deQR - Xem mã QR này" },
+
+  "uiBadgeReveal": { "message": "Xem trước" },
+  "uiBadgeRevealTitle": { "message": "deQR - Giải mã mã QR này" },
+  "uiBadgeAllow": { "message": "Cho phép deQR" },
+  "uiBadgeAllowTitle": {
+    "message": "deQR không thể đọc ảnh này vì ảnh được tải từ $origin$ mà không có CORS header. Nhấp để cấp quyền truy cập vào nguồn đó.",
+    "placeholders": { "origin": { "content": "$1", "example": "https://cdn.example.com" } }
+  },
+  "uiDialogLabel": { "message": "deQR - mã QR đã được giải mã" },
+  "uiChipDanger": { "message": "Nguy hiểm" },
+  "uiChipCaution": { "message": "Kiểm tra trước" },
+  "uiChipInfo": { "message": "Không có cảnh báo" },
+  "uiClose": { "message": "Đóng" },
+  "uiDestination": { "message": "Liên kết này thực chất dẫn đến" },
+  "uiDisplaysAs": {
+    "message": "Đang hiển thị là: $host$",
+    "placeholders": { "host": { "content": "$1", "example": "аpple.com" } }
+  },
+  "uiRegisteredDomain": {
+    "message": "Tên miền đã đăng ký: $domain$",
+    "placeholders": { "domain": { "content": "$1", "example": "example.co.uk" } }
+  },
+  "uiShow": { "message": "Hiển thị" },
+  "uiTruncated": {
+    "message": "Đang hiển thị $shown$ trong tổng số $total$ ký tự",
+    "placeholders": {
+      "shown": { "content": "$1", "example": "4096" },
+      "total": { "content": "$2", "example": "9210" }
+    }
+  },
+  "uiShowRaw": { "message": "Hiển thị dữ liệu gốc" },
+  "uiRawSecretNote": { "message": "có chứa thông tin bảo mật ở trên" },
+  "uiCopyText": { "message": "Sao chép văn bản" },
+  "uiCopied": { "message": "Đã sao chép" },
+  "uiCopyBlocked": { "message": "Bị chặn sao chép" },
+  "uiOpen": { "message": "Mở" },
+  "uiOpenAnyway": { "message": "Tiếp tục mở" },
+  "uiOpenConfirm": { "message": "Chắc chắn mở - nhấp lại lần nữa" },
+  "uiWillNotOpen": {
+    "message": "deQR sẽ không mở liên kết này. Hãy sao chép văn bản nếu bạn cần kiểm tra."
+  },
+
+  "optTitle": { "message": "deQR - Cài đặt" },
+  "optTagline": { "message": "Xem trước mã QR này." },
+  "optImageAccess": { "message": "Quyền truy cập ảnh" },
+  "optImageAccessHelp": {
+    "message": "deQR đọc mã QR trực tiếp trên trang và không cần quyền đặc biệt đối với ảnh được lưu trữ trên trang bạn đang xem. Trình duyệt sẽ chặn ảnh được tải từ một nguồn khác không có CORS header, do đó không thể đọc được. Hãy thêm các nguồn đó vào đây để deQR có thể tải trực tiếp. Dữ liệu sẽ không bị gửi đi đâu; mọi thứ được xử lý cục bộ ngay trên trình duyệt của bạn."
+  },
+  "optOriginLabel": { "message": "Nguồn cần cho phép" },
+  "optAllow": { "message": "Cho phép" },
+  "optScanning": { "message": "Quét" },
+  "optDeepScan": { "message": "Quét sâu" },
+  "optDeepScanHelp": {
+    "message": "Gửi mọi hình ảnh đến bộ giải mã thay vì sàng lọc trước các hoa văn định vị mã QR. Giúp nhận diện được những mã bị mờ, méo hoặc ảnh chụp lại mà bộ lọc nhanh có thể bỏ sót. Sẽ làm chậm hơn rõ rệt trên các trang có nhiều hình ảnh."
+  },
+  "optRevealSecrets": { "message": "Hiển thị ngay thông tin nhạy cảm" },
+  "optRevealSecretsHelp": {
+    "message": "Mật khẩu Wi-Fi và mã xác thực 2 bước mặc định sẽ bị ẩn và cần nhấp để xem, giúp bạn tránh bị lộ thông tin khi có người đang nhìn vào màn hình."
+  },
+  "optAppearance": { "message": "Giao diện" },
+  "optAppearanceHelp": {
+    "message": "Áp dụng cho trang này và bảng thông tin deQR hiển thị trên các trang web. Những thay đổi này sẽ có tác dụng ngay lập tức trên các tab đang mở."
+  },
+  "optThemeSystem": { "message": "Hệ thống" },
+  "optThemeSystemHelp": { "message": "Tự động đồng bộ với thiết lập của hệ điều hành." },
+  "optThemeLight": { "message": "Sáng" },
+  "optThemeDark": { "message": "Tối" },
+  "optDisabledSites": { "message": "Trang web đã vô hiệu hóa" },
+  "optDisabledSitesHelp": { "message": "deQR sẽ không quét mã QR trên những tên miền này." },
+  "optHostnameLabel": { "message": "Tên miền cần vô hiệu hóa" },
+  "optAdd": { "message": "Thêm" },
+  "optFooter": {
+    "message": "deQR giải mã hoàn toàn trên máy của bạn. Tiện ích không tự gửi yêu cầu mạng, không thu thập dữ liệu và tuyệt đối không bao giờ truyền đi dữ liệu đã được giải mã."
+  },
+  "optRemove": { "message": "Xóa" },
+  "optNoOrigins": { "message": "Chưa có nguồn nào được cho phép." },
+  "optNoSites": { "message": "Chưa có trang web nào bị vô hiệu hóa." },
+  "optInvalidOrigin": { "message": "Đó không phải là một nguồn hợp lệ." },
+  "optOnlyHttp": { "message": "Chỉ có thể cấp quyền cho các nguồn http và https." },
+  "optPermissionDeclined": { "message": "Quyền truy cập đã bị từ chối." },
+
+  "payloadLink": { "message": "Liên kết" },
+  "payloadEmail": { "message": "Email" },
+  "payloadPhone": { "message": "Số điện thoại" },
+  "payloadSms": { "message": "Tin nhắn SMS" },
+  "payloadWhatsapp": { "message": "Tin nhắn WhatsApp" },
+  "payloadWhatsappGroup": { "message": "Lời mời vào nhóm WhatsApp" },
+  "payloadWifi": { "message": "Mạng Wi-Fi" },
+  "payloadContact": { "message": "Thẻ liên hệ" },
+  "payloadCalendar": { "message": "Sự kiện lịch" },
+  "payloadLocation": { "message": "Vị trí" },
+  "payloadOtpauth": { "message": "Mã xác thực hai yếu tố (2FA)" },
+  "payloadCrypto": {
+    "message": "Giao dịch $network$",
+    "placeholders": { "network": { "content": "$1", "example": "Bitcoin" } }
+  },
+  "payloadPayment": { "message": "Yêu cầu thanh toán" },
+  "payloadText": { "message": "Văn bản thuần túy" },
+
+  "fieldNetwork": { "message": "Mạng" },
+  "fieldSecurity": { "message": "Bảo mật" },
+  "fieldPassword": { "message": "Mật khẩu" },
+  "fieldHiddenNetwork": { "message": "Mạng ẩn" },
+  "fieldName": { "message": "Tên" },
+  "fieldPhone": { "message": "Điện thoại" },
+  "fieldEmail": { "message": "Email" },
+  "fieldAddress": { "message": "Địa chỉ" },
+  "fieldOrganization": { "message": "Tổ chức" },
+  "fieldWebsite": { "message": "Trang web" },
+  "fieldNote": { "message": "Ghi chú" },
+  "fieldTitle": { "message": "Chức danh" },
+  "fieldEvent": { "message": "Sự kiện" },
+  "fieldLocation": { "message": "Địa điểm" },
+  "fieldStarts": { "message": "Bắt đầu" },
+  "fieldEnds": { "message": "Kết thúc" },
+  "fieldDescription": { "message": "Mô tả" },
+  "fieldType": { "message": "Loại" },
+  "fieldIssuer": { "message": "Nhà cung cấp" },
+  "fieldAccount": { "message": "Tài khoản" },
+  "fieldSharedSecret": { "message": "Khóa bảo mật chung" },
+  "fieldMerchant": { "message": "Người bán" },
+  "fieldAmount": { "message": "Số tiền" },
+  "fieldCity": { "message": "Thành phố" },
+  "fieldCountry": { "message": "Quốc gia" },
+  "fieldEmvAccount": {
+    "message": "Tài khoản (thẻ $tag$)",
+    "placeholders": { "tag": { "content": "$1", "example": "38" } }
+  },
+  "fieldTokenContract": { "message": "Hợp đồng token" },
+  "fieldFunction": { "message": "Chức năng" },
+  "fieldRecipient": { "message": "Người nhận" },
+  "fieldChainId": { "message": "Chain ID" },
+  "fieldLabel": { "message": "Nhãn" },
+  "fieldMessage": { "message": "Tin nhắn" },
+  "fieldGroupInvite": { "message": "Lời mời vào nhóm" },
+  "fieldNumber": { "message": "Số" },
+  "fieldTo": { "message": "Tới" },
+  "fieldSubject": { "message": "Chủ đề" },
+  "fieldBody": { "message": "Nội dung thư" },
+  "fieldCc": { "message": "Cc" },
+  "fieldBcc": { "message": "Bcc" },
+  "fieldCoordinates": { "message": "Tọa độ" },
+  "fieldPayeeAddress": { "message": "Địa chỉ người nhận" },
+  "fieldPayeeName": { "message": "Tên người nhận" },
+  "fieldCurrency": { "message": "Tiền tệ" },
+  "fieldText": { "message": "Văn bản" },
+  "fieldVerbatim": {
+    "message": "$name$",
+    "placeholders": { "name": { "content": "$1", "example": "BDAY" } }
+  },
+
+  "valueSecurityNone": { "message": "không" },
+  "valueYes": { "message": "có" },
+  "valueHotp": { "message": "HOTP (Dựa trên bộ đếm)" },
+  "valueTotp": { "message": "TOTP (Dựa trên thời gian)" },
+  "valueEmvAmount": {
+    "message": "$amount$ (mã tiền tệ $currency$)",
+    "placeholders": {
+      "amount": { "content": "$1", "example": "100000" },
+      "currency": { "content": "$2", "example": "704" }
+    }
+  },
+  "valueAmountUnset": { "message": "không cố định - do người thanh toán tự nhập" },
+
+  "scriptLatin": { "message": "Latinh" },
+  "scriptCyrillic": { "message": "Cyrillic" },
+  "scriptGreek": { "message": "Hy Lạp" },
+  "scriptHan": { "message": "Hán" },
+  "scriptArabic": { "message": "Ả Rập" },
+  "scriptHebrew": { "message": "Hebrew" },
+  "scriptArmenian": { "message": "Armenia" },
+  "scriptCherokee": { "message": "Cherokee" },
+
+  "reasonBlockedSchemeTitle": {
+    "message": "Liên kết thực thi mã hoặc trỏ đến tài nguyên cục bộ ($scheme$:)",
+    "placeholders": { "scheme": { "content": "$1", "example": "javascript" } }
+  },
+  "reasonBlockedSchemeDetail": {
+    "message": "Đây không phải là một địa chỉ web. Việc mở liên kết này sẽ thực thi mã hoặc đọc tài nguyên cục bộ trên trình duyệt của bạn. deQR sẽ không mở nó."
+  },
+  "reasonUserinfoTitle": { "message": "Tên miền hiển thị không phải là đích đến thực sự" },
+  "reasonUserinfoDetail": {
+    "message": "Trình duyệt sẽ bỏ qua mọi thứ trước ký tự \"@\". Liên kết này thực chất dẫn tới $host$, chứ không phải $shown$.",
+    "placeholders": {
+      "host": { "content": "$1", "example": "evil.tld" },
+      "shown": { "content": "$2", "example": "paypal" }
+    }
+  },
+  "reasonUserinfoDetailUnnamed": {
+    "message": "Trình duyệt sẽ bỏ qua mọi thứ trước ký tự \"@\". Liên kết này thực chất dẫn tới $host$, chứ không phải tên miền hiển thị ban đầu.",
+    "placeholders": { "host": { "content": "$1", "example": "evil.tld" } }
+  },
+  "reasonMixedScriptTitle": { "message": "Tên miền trộn lẫn nhiều bảng chữ cái" },
+  "reasonMixedScriptDetail": {
+    "message": "Tên miền này hiển thị là \"$host$\", do trộn lẫn các ký tự $scripts$. Các tên miền hợp pháp hiếm khi làm vậy, nhưng những tên miền giả mạo thì có. Trình duyệt sẽ phân giải nó thành $ascii$.",
+    "placeholders": {
+      "host": { "content": "$1", "example": "аpple.com" },
+      "scripts": { "content": "$2", "example": "Latinh và Kirin" },
+      "ascii": { "content": "$3", "example": "xn--pple-43d.com" }
+    }
+  },
+  "reasonConfusableTitle": { "message": "Tên miền sử dụng ký tự giả mạo chữ Latinh" },
+  "reasonConfusableDetail": {
+    "message": "Có một số ký tự trong tên miền này trông giống chữ cái thông thường nhưng thực chất không phải. Trình duyệt sẽ phân giải thành $ascii$. Đây không phải là địa chỉ web thông thường mà bạn nghĩ tới.",
+    "placeholders": { "ascii": { "content": "$1", "example": "xn--80ak6aa92e.com" } }
+  },
+  "reasonPunycodeTitle": { "message": "Tên miền quốc tế hóa" },
+  "reasonPunycodeDetail": {
+    "message": "Được phân giải thành $ascii$. Hãy kiểm tra kỹ xem đây có đúng là tên miền bạn cần không.",
+    "placeholders": { "ascii": { "content": "$1", "example": "xn--80ak6aa92e.com" } }
+  },
+  "reasonInsecureTitle": { "message": "Kết nối không được mã hóa (http)" },
+  "reasonInsecureDetail": {
+    "message": "Mọi dữ liệu bạn gửi đến trang này đều có thể bị đọc lén và chỉnh sửa trên đường truyền."
+  },
+  "reasonShortenerTitle": { "message": "Liên kết rút gọn - đích đến thực sự đã bị ẩn" },
+  "reasonShortenerDetail": {
+    "message": "$domain$ sẽ chuyển hướng bạn đến một trang khác. Không có thông tin nào trong mã QR này cho biết bạn sẽ đi đâu.",
+    "placeholders": { "domain": { "content": "$1", "example": "bit.ly" } }
+  },
+  "reasonIpHostTitle": { "message": "Sử dụng địa chỉ IP thay vì tên miền" },
+  "reasonIpHostDetail": { "message": "Các dịch vụ hợp pháp thường sử dụng tên miền để truy cập thay vì địa chỉ IP." },
+  "reasonPortTitle": {
+    "message": "Cổng không tiêu chuẩn ($port$)",
+    "placeholders": { "port": { "content": "$1", "example": "8080" } }
+  },
+  "reasonPortDetail": {
+    "message": "Các dịch vụ web hiếm khi yêu cầu bạn kết nối qua một cổng bất thường như thế này."
+  },
+  "reasonNestedUrlTitle": { "message": "Liên kết chuyển hướng sang một địa chỉ khác" },
+  "reasonNestedUrlDetail": {
+    "message": "$host$ chỉ là bước trung gian. Tham số \"$param$\" sẽ tiếp tục chuyển hướng bạn tới: $target$",
+    "placeholders": {
+      "host": { "content": "$1", "example": "example.com" },
+      "param": { "content": "$2", "example": "redirect" },
+      "target": { "content": "$3", "example": "https://evil.tld" }
+    }
+  },
+  "reasonLongUrlTitle": { "message": "Địa chỉ web dài bất thường" },
+  "reasonLongUrlDetail": {
+    "message": "Dài $count$ ký tự. Những đường dẫn quá dài thường được kẻ xấu sử dụng để đẩy tên miền thật ra khỏi tầm nhìn của bạn.",
+    "placeholders": { "count": { "content": "$1", "example": "812" } }
+  },
+  "reasonTotpSeedTitle": { "message": "Đây là mã thiết lập xác thực hai yếu tố (2FA)" },
+  "reasonTotpSeedDetail": {
+    "message": "Việc quét mã này bằng ứng dụng xác thực sẽ cấp cho ứng dụng đó quyền tạo mã đăng nhập vĩnh viễn cho tài khoản. Nếu bạn không chủ động yêu cầu cài đặt xác thực 2 bước, tuyệt đối đừng sử dụng nó."
+  },
+  "reasonWifiTitle": { "message": "Tự động kết nối vào mạng Wi-Fi" },
+  "reasonWifiDetail": {
+    "message": "Quản trị viên của mạng này có thể theo dõi và can thiệp vào các truy cập không được mã hóa. Chỉ nên kết nối vào những mạng mà bạn biết rõ."
+  },
+  "reasonPaymentTitle": { "message": "Đây là một yêu cầu thanh toán" },
+  "reasonPaymentDetail": {
+    "message": "Hãy kiểm tra kỹ người nhận và số tiền bên dưới so với người mà bạn đang giao dịch. Các khoản thanh toán này thường không thể hoàn lại, và việc tráo đổi mã QR là một trò lừa đảo rất phổ biến."
+  },
+  "reasonPremiumRateTitle": { "message": "Số điện thoại có thể bị tính cước cao" },
+  "reasonPremiumRateDetail": {
+    "message": "Số $number$ giống với các đầu số dịch vụ tính cước cao. Bạn có thể bị trừ rất nhiều tiền khi gọi hoặc nhắn tin đến những số này.",
+    "placeholders": { "number": { "content": "$1", "example": "+1900555000" } }
+  },
+  "reasonPrefilledSmsTitle": { "message": "Gửi một tin nhắn được soạn sẵn thay mặt bạn" },
+  "reasonPrefilledSmsDetail": {
+    "message": "Hãy đọc kỹ nội dung bên dưới trước khi gửi. Một số đầu số dịch vụ sẽ trừ tiền ngay khi nhận được tin nhắn."
+  },
+  "reasonGroupInviteTitle": { "message": "Tham gia vào một nhóm WhatsApp" },
+  "reasonGroupInviteDetail": {
+    "message": "Khi tham gia, số điện thoại và hồ sơ của bạn sẽ bị lộ với tất cả các thành viên trong nhóm, và bạn không thể biết họ là ai thông qua lời mời này."
+  },
+  "reasonPrefilledWhatsappTitle": { "message": "Mở đoạn chat với một tin nhắn soạn sẵn" },
+  "reasonPrefilledWhatsappDetail": {
+    "message": "Người nhận và nội dung tin nhắn đã được kẻ tạo ra mã QR này thiết lập sẵn. Hãy kiểm tra số điện thoại bên dưới - việc bắt đầu đoạn chat sẽ để lộ số của bạn."
+  },
+  "reasonPrefilledMailTitle": { "message": "Một email được soạn sẵn" },
+  "reasonPrefilledMailDetail": {
+    "message": "Nội dung của email này được thiết lập bởi người tạo ra mã QR, chứ không phải bạn."
+  },
+  "reasonBidiTitle": { "message": "Chứa các ký tự ghi đè hướng văn bản" },
+  "reasonBidiDetail": {
+    "message": "Đây là những ký tự vô hình dùng để xáo trộn thứ tự hiển thị của văn bản. Chúng thường được dùng để ngụy trang một địa chỉ độc hại thành an toàn. Các ký tự này đã được loại bỏ khỏi văn bản đang hiển thị ở đây."
+  },
+  "reasonZeroWidthTitle": { "message": "Chứa các ký tự vô hình" },
+  "reasonZeroWidthDetail": {
+    "message": "Mã này có chứa các ký tự có độ rộng bằng 0. Bạn không thể nhìn thấy chúng bằng mắt thường, nhưng chúng có thể làm thay đổi nội dung thực sự của văn bản."
+  }
+}

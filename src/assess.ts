@@ -7,13 +7,17 @@
  */
 
 import type { Payload, UrlParts } from './classify';
+import type { MessageKey } from './i18n';
 
 export type RiskLevel = 'danger' | 'caution' | 'info';
 
 export interface Reason {
   code: string;
-  title: string;
-  detail: string;
+  titleKey: MessageKey;
+  detailKey: MessageKey;
+  titleArgs?: string[];
+  detailArgs?: string[];
+  scripts?: MessageKey[];
 }
 
 export interface Assessment {
@@ -45,15 +49,15 @@ const OTHER_CONTROLS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g;
 const LATIN_CONFUSABLES =
   /[аеорсухіјѕһԁѵԛԁοναρετυικχɡȗ]/;
 
-const SCRIPT_TESTS: ReadonlyArray<[string, RegExp]> = [
-  ['Latin', /\p{Script=Latin}/u],
-  ['Cyrillic', /\p{Script=Cyrillic}/u],
-  ['Greek', /\p{Script=Greek}/u],
-  ['Han', /\p{Script=Han}/u],
-  ['Arabic', /\p{Script=Arabic}/u],
-  ['Hebrew', /\p{Script=Hebrew}/u],
-  ['Armenian', /\p{Script=Armenian}/u],
-  ['Cherokee', /\p{Script=Cherokee}/u],
+const SCRIPT_TESTS: ReadonlyArray<[MessageKey, RegExp]> = [
+  ['scriptLatin', /\p{Script=Latin}/u],
+  ['scriptCyrillic', /\p{Script=Cyrillic}/u],
+  ['scriptGreek', /\p{Script=Greek}/u],
+  ['scriptHan', /\p{Script=Han}/u],
+  ['scriptArabic', /\p{Script=Arabic}/u],
+  ['scriptHebrew', /\p{Script=Hebrew}/u],
+  ['scriptArmenian', /\p{Script=Armenian}/u],
+  ['scriptCherokee', /\p{Script=Cherokee}/u],
 ];
 
 /** Schemes that must never be handed to the browser from an untrusted QR code. */
@@ -97,7 +101,7 @@ export function sanitizeForDisplay(value: string): string {
     .replace(OTHER_CONTROLS, '\ufffd');
 }
 
-function scriptsIn(value: string): string[] {
+function scriptsIn(value: string): MessageKey[] {
   const letters = value.replace(/[\p{Nd}\p{P}\p{S}\s]/gu, '');
   return SCRIPT_TESTS.filter(([, re]) => re.test(letters)).map(([name]) => name);
 }
@@ -106,17 +110,20 @@ function assessUrl(url: UrlParts, reasons: Reason[]): void {
   if (BLOCKED_SCHEMES.has(url.scheme)) {
     reasons.push({
       code: 'blocked-scheme',
-      title: `Executable or local-resource link (${url.scheme}:)`,
-      detail:
-        'This is not a web address. Opening it would run code or read a local resource in your browser. deQR will not open it.',
+      titleKey: 'reasonBlockedSchemeTitle',
+      titleArgs: [url.scheme],
+      detailKey: 'reasonBlockedSchemeDetail',
     });
   }
 
   if (url.userinfo) {
+    // The part before the @ is not always a readable name to quote back.
+    const shown = url.userinfo.split(/[:.]/)[0] ?? '';
     reasons.push({
       code: 'userinfo',
-      title: 'The visible domain is not where this goes',
-      detail: `Everything before the "@" is ignored by the browser. This link resolves to ${url.asciiHost}, not to ${url.userinfo.split(/[:.]/)[0] || 'the name shown first'}.`,
+      titleKey: 'reasonUserinfoTitle',
+      detailKey: shown ? 'reasonUserinfoDetail' : 'reasonUserinfoDetailUnnamed',
+      detailArgs: shown ? [url.asciiHost, shown] : [url.asciiHost],
     });
   }
 
@@ -126,8 +133,10 @@ function assessUrl(url: UrlParts, reasons: Reason[]): void {
   if (scripts.length > 1) {
     reasons.push({
       code: 'mixed-script',
-      title: 'Domain mixes alphabets',
-      detail: `The hostname reads as "${url.unicodeHost}", which combines ${scripts.join(' and ')} characters. Real domains almost never do this; lookalike domains do. The browser will resolve it as ${url.asciiHost}.`,
+      titleKey: 'reasonMixedScriptTitle',
+      detailKey: 'reasonMixedScriptDetail',
+      detailArgs: [url.unicodeHost, url.asciiHost],
+      scripts,
     });
   } else if (LATIN_CONFUSABLES.test(url.unicodeHost)) {
     // Caution, not danger: a hostname written entirely in one non-Latin script
@@ -137,46 +146,50 @@ function assessUrl(url: UrlParts, reasons: Reason[]): void {
     // homograph of a Latin brand trips mixed-script above rather than this.
     reasons.push({
       code: 'confusable',
-      title: 'Domain uses letters that imitate Latin ones',
-      detail: `Characters in this hostname look like ordinary letters but are not. The browser will resolve it as ${url.asciiHost}. If you expected an all-Latin address, this is not it.`,
+      titleKey: 'reasonConfusableTitle',
+      detailKey: 'reasonConfusableDetail',
+      detailArgs: [url.asciiHost],
     });
   } else if (url.asciiHost.includes('xn--')) {
     reasons.push({
       code: 'punycode',
-      title: 'Internationalized domain',
-      detail: `Resolves to ${url.asciiHost}. Verify this is the domain you expect.`,
+      titleKey: 'reasonPunycodeTitle',
+      detailKey: 'reasonPunycodeDetail',
+      detailArgs: [url.asciiHost],
     });
   }
 
   if (url.scheme === 'http') {
     reasons.push({
       code: 'insecure',
-      title: 'Unencrypted connection (http)',
-      detail: 'Anything you send to this page can be read and modified in transit.',
+      titleKey: 'reasonInsecureTitle',
+      detailKey: 'reasonInsecureDetail',
     });
   }
 
   if (SHORTENERS.has(url.registrableDomain)) {
     reasons.push({
       code: 'shortener',
-      title: 'Shortened link - real destination hidden',
-      detail: `${url.registrableDomain} forwards somewhere else. Nothing in this QR code tells you where.`,
+      titleKey: 'reasonShortenerTitle',
+      detailKey: 'reasonShortenerDetail',
+      detailArgs: [url.registrableDomain],
     });
   }
 
   if (IPV4.test(url.asciiHost) || url.asciiHost.includes(':')) {
     reasons.push({
       code: 'ip-host',
-      title: 'Numeric address instead of a domain name',
-      detail: 'Legitimate services are normally reached by domain name.',
+      titleKey: 'reasonIpHostTitle',
+      detailKey: 'reasonIpHostDetail',
     });
   }
 
   if (url.port && url.port !== '80' && url.port !== '443') {
     reasons.push({
       code: 'port',
-      title: `Non-standard port (${url.port})`,
-      detail: 'Web services rarely ask you to connect on an unusual port.',
+      titleKey: 'reasonPortTitle',
+      titleArgs: [url.port],
+      detailKey: 'reasonPortDetail',
     });
   }
 
@@ -189,8 +202,9 @@ function assessUrl(url: UrlParts, reasons: Reason[]): void {
       if (value && /^(?:https?:\/\/|\/\/)/i.test(value.trim())) {
         reasons.push({
           code: 'nested-url',
-          title: 'Link forwards to another address',
-          detail: `${url.asciiHost} is only the first hop. The "${key}" parameter sends you to: ${value}`,
+          titleKey: 'reasonNestedUrlTitle',
+          detailKey: 'reasonNestedUrlDetail',
+          detailArgs: [url.asciiHost, key, value],
         });
         break;
       }
@@ -200,8 +214,9 @@ function assessUrl(url: UrlParts, reasons: Reason[]): void {
   if (url.href.length > 512) {
     reasons.push({
       code: 'long-url',
-      title: 'Unusually long address',
-      detail: `${url.href.length} characters. Length is often used to push the real domain out of view.`,
+      titleKey: 'reasonLongUrlTitle',
+      detailKey: 'reasonLongUrlDetail',
+      detailArgs: [String(url.href.length)],
     });
   }
 }
@@ -211,17 +226,15 @@ function assessNonUrl(payload: Payload, reasons: Reason[]): void {
     case 'otpauth':
       reasons.push({
         code: 'totp-seed',
-        title: 'This is a two-factor authentication seed',
-        detail:
-          'Scanning this with an authenticator app gives that app a permanent code generator for the account. If you did not just ask a service to enrol a new authenticator, do not use it.',
+        titleKey: 'reasonTotpSeedTitle',
+        detailKey: 'reasonTotpSeedDetail',
       });
       break;
     case 'wifi':
       reasons.push({
         code: 'wifi',
-        title: 'Joins a wireless network',
-        detail:
-          'Whoever runs the network can see and alter unencrypted traffic. Only join networks you know.',
+        titleKey: 'reasonWifiTitle',
+        detailKey: 'reasonWifiDetail',
       });
       break;
     case 'emv':
@@ -229,57 +242,55 @@ function assessNonUrl(payload: Payload, reasons: Reason[]): void {
     case 'upi':
       reasons.push({
         code: 'payment',
-        title: 'This is a payment instruction',
-        detail:
-          'Check the recipient and amount below against the merchant you are actually dealing with. These transfers are normally irreversible, and swapping the payment QR is a common scam.',
+        titleKey: 'reasonPaymentTitle',
+        detailKey: 'reasonPaymentDetail',
       });
       break;
     case 'sms':
     case 'tel': {
-      const number = payload.fields.find((f) => f.name === 'Number')?.value ?? '';
-      const hasMessage = payload.fields.some((f) => f.name === 'Message' && f.value);
+      const number = payload.fields.find((f) => f.key === 'fieldNumber')?.value ?? '';
+      const hasMessage = payload.fields.some((f) => f.key === 'fieldMessage' && f.value);
       if (/^(?:\+?1-?9\d{2}|0?9[0-9]{2}|\+44\s?9|\+49\s?900)/.test(number.replace(/\s/g, ''))) {
         reasons.push({
           code: 'premium-rate',
-          title: 'Number may be premium-rate',
-          detail: `${number} matches a premium-rate prefix. Calls or messages to these numbers can be charged at a high rate.`,
+          titleKey: 'reasonPremiumRateTitle',
+          detailKey: 'reasonPremiumRateDetail',
+          detailArgs: [number],
         });
       }
       if (hasMessage) {
         reasons.push({
           code: 'prefilled-message',
-          title: 'Sends a pre-written message on your behalf',
-          detail: 'Read the message text below before sending. Premium shortcodes bill on receipt.',
+          titleKey: 'reasonPrefilledSmsTitle',
+          detailKey: 'reasonPrefilledSmsDetail',
         });
       }
       break;
     }
     case 'whatsapp': {
-      if (payload.fields.some((f) => f.name === 'Group invite')) {
+      if (payload.fields.some((f) => f.key === 'fieldGroupInvite')) {
         reasons.push({
           code: 'group-invite',
-          title: 'Joins a WhatsApp group',
-          detail:
-            'Joining shows your phone number and profile to everyone already in the group, and there is no way to tell from the invite who that is.',
+          titleKey: 'reasonGroupInviteTitle',
+          detailKey: 'reasonGroupInviteDetail',
         });
         break;
       }
-      if (payload.fields.some((f) => f.name === 'Message' && f.value)) {
+      if (payload.fields.some((f) => f.key === 'fieldMessage' && f.value)) {
         reasons.push({
           code: 'prefilled-message',
-          title: 'Opens a chat with a pre-written message',
-          detail:
-            'Both the recipient and the message text were chosen by whoever made this QR code. Check the number below - starting the chat reveals your number to it.',
+          titleKey: 'reasonPrefilledWhatsappTitle',
+          detailKey: 'reasonPrefilledWhatsappDetail',
         });
       }
       break;
     }
     case 'mailto': {
-      if (payload.fields.some((f) => f.name === 'Body' && f.value)) {
+      if (payload.fields.some((f) => f.key === 'fieldBody' && f.value)) {
         reasons.push({
           code: 'prefilled-message',
-          title: 'Pre-written email',
-          detail: 'The message body was chosen by whoever made this QR code, not by you.',
+          titleKey: 'reasonPrefilledMailTitle',
+          detailKey: 'reasonPrefilledMailDetail',
         });
       }
       break;
@@ -295,17 +306,15 @@ export function assess(payload: Payload, text: string): Assessment {
   if (BIDI_CONTROLS.test(text)) {
     reasons.push({
       code: 'bidi',
-      title: 'Contains text-direction override characters',
-      detail:
-        'Invisible characters that reorder how text is displayed. They are used to make a hostile address read as a harmless one. They have been removed from the text shown here.',
+      titleKey: 'reasonBidiTitle',
+      detailKey: 'reasonBidiDetail',
     });
   }
   if (ZERO_WIDTH.test(text)) {
     reasons.push({
       code: 'zero-width',
-      title: 'Contains invisible characters',
-      detail:
-        'Zero-width characters are present. They cannot be seen but change what the text actually is.',
+      titleKey: 'reasonZeroWidthTitle',
+      detailKey: 'reasonZeroWidthDetail',
     });
   }
 

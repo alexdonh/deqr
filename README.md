@@ -82,6 +82,18 @@ because a token transfer puts the *contract* address in the path and the real
 recipient in a query parameter - showing one "Address" for both would put the
 wrong destination in front of you.
 
+### Languages
+
+English and Vietnamese, following the browser's own UI language. There is no
+picker - `browser.i18n.getMessage` reads the browser setting and cannot be
+overridden at runtime.
+
+Adding a language is one file: copy `public/_locales/en/messages.json` to
+`public/_locales/<code>/messages.json` and translate the `message` values,
+leaving the keys and `placeholders` blocks alone. `tests/i18n.test.ts` then
+holds the new file to the same key set, and to the same substitutions, as
+English.
+
 ## Security model
 
 The payload was written by someone you have no relationship with, so treat it as
@@ -190,7 +202,7 @@ components' terms require it.
 
 ## Lessons learnt
 
-Five things that cost real debugging time and would be easy to hit again:
+Six things that cost real debugging time and would be easy to hit again:
 
 1. **Chrome's `runtime.sendMessage` is JSON-serialized, not structured-clone.** A
    `Uint8Array` arrives as `{"0":12,"1":255,...}`, quietly loses `.length`, and
@@ -214,3 +226,10 @@ Five things that cost real debugging time and would be easy to hit again:
    are walked and observed separately. Both are in `qr-test.html`, and
    `pnpm verify` moves a real pointer over each and fails if no badge is under
    the cursor.
+6. **`--lang` does not change an extension's locale on macOS.** Neither does
+   `LANG`, `--accept-lang`, or `intl.app_locale` in the profile's Local State -
+   `browser.i18n.getUILanguage()` stays `en-US` through all of them. To see
+   another locale rendered, copy the build, delete `_locales/en` from the copy,
+   point `default_locale` at the locale you want, and load that. Chrome matches
+   the browser language first and only falls back to `default_locale`, so
+   leaving `_locales/en` in place silently keeps you in English.

@@ -7,12 +7,13 @@
 
 import { browser } from 'wxt/browser';
 
-import { sanitizeForDisplay, type RiskLevel } from './assess';
+import { sanitizeForDisplay, type Reason, type RiskLevel } from './assess';
 import { ICONS, type IconName } from './icons';
 import type { Field } from './classify';
 import type { QrResult } from './messages';
 import type { Outcome } from './scan';
 import type { Rasterizable } from './raster';
+import { formatList, t } from './i18n';
 import { applyTheme, type Settings, type Theme } from './settings';
 
 /** Longer than this and the panel shows a prefix with an expand control. */
@@ -191,6 +192,12 @@ interface Tracked {
   badge: HTMLButtonElement;
 }
 
+function detail(reason: Reason): string {
+  if (!reason.scripts) return t(reason.detailKey, reason.detailArgs);
+  const [host = '', ascii = ''] = reason.detailArgs ?? [];
+  return t(reason.detailKey, [host, formatList(reason.scripts.map((key) => t(key))), ascii]);
+}
+
 function covers(rect: DOMRect, at: { x: number; y: number }): boolean {
   return at.x >= rect.left && at.x <= rect.right && at.y >= rect.top && at.y <= rect.bottom;
 }
@@ -257,16 +264,16 @@ export class Ui {
     badge.type = 'button';
     if (outcome.status === 'locked') {
       badge.classList.add('locked');
-      badge.append(icon('lock', 13), make('span', undefined, 'Allow deQR'));
-      badge.title = `deQR cannot read this image because it is served from ${outcome.origin} without CORS headers. Click to grant access to that origin.`;
+      badge.append(icon('lock', 13), make('span', undefined, t('uiBadgeAllow')));
+      badge.title = t('uiBadgeAllowTitle', [outcome.origin]);
       badge.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();
         void browser.runtime.sendMessage({ type: 'request-grant', origin: outcome.origin });
       });
     } else {
-      badge.append(qrIcon(), make('span', undefined, 'Reveal'));
-      badge.title = 'deQR - Reveal this QR Code';
+      badge.append(qrIcon(), make('span', undefined, t('uiBadgeReveal')));
+      badge.title = t('uiBadgeRevealTitle');
       badge.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -362,7 +369,7 @@ export class Ui {
     const card = make('div', 'card');
     card.setAttribute('role', 'dialog');
     card.setAttribute('aria-modal', 'true');
-    card.setAttribute('aria-label', 'deQR - decoded QR code');
+    card.setAttribute('aria-label', t('uiDialogLabel'));
     card.append(
       this.head(result),
       ...this.destination(result),
@@ -380,18 +387,18 @@ export class Ui {
   private head(result: QrResult): HTMLElement {
     const head = make('div', 'head');
     const chipText: Record<RiskLevel, string> = {
-      danger: 'Do not open',
-      caution: 'Check first',
-      info: 'No warnings',
+      danger: t('uiChipDanger'),
+      caution: t('uiChipCaution'),
+      info: t('uiChipInfo'),
     };
     const level = result.assessment.level;
     const chip = make('span', `chip ${level}`);
     chip.append(icon(level === 'info' ? 'info' : 'warning', 11), make('span', undefined, chipText[level]));
-    head.append(make('h2', undefined, result.payload.label), chip);
+    head.append(make('h2', undefined, t(result.payload.labelKey, result.payload.labelArgs)), chip);
     const close = make('button', 'close');
     close.append(icon('close', 18));
     close.type = 'button';
-    close.setAttribute('aria-label', 'Close');
+    close.setAttribute('aria-label', t('uiClose'));
     close.addEventListener('click', () => this.close());
     head.append(close);
     return head;
@@ -405,17 +412,17 @@ export class Ui {
     const url = result.payload.url;
     if (!url) return [];
     const box = make('div', 'dest');
-    box.append(make('div', 'label', 'This link actually goes to'));
+    box.append(make('div', 'label', t('uiDestination')));
     // The host the browser will actually resolve gets the largest type, never the
     // prettier form the payload wanted to show.
     box.append(make('div', 'host', sanitizeForDisplay(url.asciiHost || url.rawHost)));
     if (url.unicodeHost && url.unicodeHost !== url.asciiHost) {
       box.append(
-        make('div', 'rest', `Displays as: ${sanitizeForDisplay(url.unicodeHost)}`),
+        make('div', 'rest', t('uiDisplaysAs', [sanitizeForDisplay(url.unicodeHost)])),
       );
     }
     if (url.registrableDomain && url.registrableDomain !== url.asciiHost) {
-      box.append(make('div', 'rest', `Registered domain: ${url.registrableDomain}`));
+      box.append(make('div', 'rest', t('uiRegisteredDomain', [url.registrableDomain])));
     }
     if (url.rest && url.rest !== '/') {
       box.append(make('div', 'rest', sanitizeForDisplay(url.rest)));
@@ -430,7 +437,10 @@ export class Ui {
         `warn ${result.assessment.level === 'danger' ? 'danger' : 'caution'}`,
       );
       const text = make('div', 'text');
-      text.append(make('strong', undefined, reason.title), make('span', undefined, reason.detail));
+      text.append(
+        make('strong', undefined, t(reason.titleKey, reason.titleArgs)),
+        make('span', undefined, detail(reason)),
+      );
       box.append(icon('warning', 15), text);
       return box;
     });
@@ -439,22 +449,23 @@ export class Ui {
   private fields(fields: Field[]): HTMLElement {
     const list = make('dl', 'fields');
     for (const field of fields) {
-      list.append(make('dt', undefined, field.name));
+      list.append(make('dt', undefined, t(field.key, field.args)));
       const dd = make('dd');
+      const value = field.value || (field.fallback ? t(field.fallback, field.fallbackArgs) : '');
       if (field.secret && !this.settings.revealSecrets) {
         const wrap = make('span', 'mask');
         const dots = make('span', undefined, '**********');
         const button = make('button', 'reveal');
         button.type = 'button';
-        button.append(icon('reveal', 12), make('span', undefined, 'Show'));
+        button.append(icon('reveal', 12), make('span', undefined, t('uiShow')));
         button.addEventListener('click', () => {
-          dots.textContent = sanitizeForDisplay(field.value);
+          dots.textContent = sanitizeForDisplay(value);
           button.remove();
         });
         wrap.append(dots, button);
         dd.append(wrap);
       } else {
-        dd.textContent = sanitizeForDisplay(field.value);
+        dd.textContent = sanitizeForDisplay(value);
       }
       list.append(dd);
     }
@@ -470,7 +481,7 @@ export class Ui {
     const clipped = text.length > DISPLAY_LIMIT;
     const body =
       sanitizeForDisplay(clipped ? text.slice(0, DISPLAY_LIMIT) : text) +
-      (clipped ? `\n... ${text.length - DISPLAY_LIMIT} more characters` : '');
+      (clipped ? `\n${t('uiTruncated', [String(DISPLAY_LIMIT), String(text.length)])}` : '');
 
     const hasSecret = result.payload.fields.some((field) => field.secret);
     if (!hasSecret || this.settings.revealSecrets) return make('pre', 'raw', body);
@@ -478,9 +489,9 @@ export class Ui {
     const holder = make('div', 'raw-hidden');
     const button = make('button', 'reveal');
     button.type = 'button';
-    button.append(icon('reveal', 12), make('span', undefined, 'Show raw payload'));
+    button.append(icon('reveal', 12), make('span', undefined, t('uiShowRaw')));
     button.addEventListener('click', () => holder.replaceWith(make('pre', 'raw', body)));
-    holder.append(button, make('span', 'note', 'contains the secret shown above'));
+    holder.append(button, make('span', 'note', t('uiRawSecretNote')));
     return holder;
   }
 
@@ -489,16 +500,16 @@ export class Ui {
 
     const copy = make('button');
     copy.type = 'button';
-    const copyLabel = make('span', undefined, 'Copy text');
+    const copyLabel = make('span', undefined, t('uiCopyText'));
     copy.append(icon('copy', 13), copyLabel);
     copy.addEventListener('click', () => {
       // User gesture, and the exact payload - not the sanitized display form.
       void navigator.clipboard.writeText(result.text).then(
         () => {
-          copyLabel.textContent = 'Copied';
+          copyLabel.textContent = t('uiCopied');
         },
         () => {
-          copyLabel.textContent = 'Copy blocked';
+          copyLabel.textContent = t('uiCopyBlocked');
         },
       );
     });
@@ -508,17 +519,17 @@ export class Ui {
       const href = result.payload.url?.href ?? result.text;
       const open = make('button', 'primary');
       open.type = 'button';
-      const openLabel = make('span', undefined, 'Open');
+      const openLabel = make('span', undefined, t('uiOpen'));
       open.append(icon('open', 13), openLabel);
       if (result.assessment.level === 'caution') {
         // Caution never opens on the first click.
         open.className = 'risky';
-        openLabel.textContent = 'Open anyway';
+        openLabel.textContent = t('uiOpenAnyway');
         let armed = false;
         open.addEventListener('click', () => {
           if (!armed) {
             armed = true;
-            openLabel.textContent = 'Really open - click again';
+            openLabel.textContent = t('uiOpenConfirm');
             return;
           }
           window.open(href, '_blank', 'noopener,noreferrer');
@@ -531,7 +542,7 @@ export class Ui {
       bar.append(open);
     } else if (result.assessment.level === 'danger') {
       bar.append(
-        make('span', 'note', 'deQR will not open this. Copy the text if you need to inspect it.'),
+        make('span', 'note', t('uiWillNotOpen')),
       );
     }
     return bar;

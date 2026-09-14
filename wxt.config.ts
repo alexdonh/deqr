@@ -29,15 +29,15 @@ export default defineConfig({
   manifest: ({ browser }) => ({
     name: 'deQR',
     short_name: 'deQR',
-    description:
-      'Reveal this QR Code - decode QR images on any page and inspect the payload before you trust it.',
+    description: '__MSG_extDescription__',
+    default_locale: 'en',
 
     // No host_permissions by default. Pixel access goes through the canvas, and the
     // options page grants individual origins when a cross-origin image taints it.
     permissions: ['storage'],
     optional_host_permissions: ['<all_urls>'],
 
-    action: { default_title: 'deQR - Reveal this QR Code' },
+    action: { default_title: '__MSG_extActionTitle__' },
     options_ui: { open_in_tab: true },
 
     // 'wasm-unsafe-eval' is required to instantiate the bundled zxing reader.

@@ -1,5 +1,6 @@
 import { browser } from 'wxt/browser';
 
+import { t, uiLanguage, type MessageKey } from '../../src/i18n';
 import { applyTheme, readSettings, writeSettings, type Theme } from '../../src/settings';
 
 // permissions.request() needs a user gesture and is unavailable in content
@@ -23,6 +24,20 @@ const deepScan = $<HTMLInputElement>('deep-scan');
 const revealSecrets = $<HTMLInputElement>('reveal-secrets');
 const themes = document.querySelectorAll<HTMLInputElement>('input[name="theme"]');
 
+function localize(): void {
+  document.documentElement.lang = uiLanguage();
+  const apply = (attr: string, set: (el: HTMLElement, text: string) => void) => {
+    for (const el of document.querySelectorAll<HTMLElement>(`[${attr}]`)) {
+      const key = el.getAttribute(attr) as MessageKey | null;
+      if (key) set(el, t(key));
+    }
+  };
+  apply('data-i18n', (el, text) => (el.textContent = text));
+  apply('data-i18n-aria-label', (el, text) => el.setAttribute('aria-label', text));
+  apply('data-i18n-title', (el, text) => el.setAttribute('title', text));
+  apply('data-i18n-placeholder', (el, text) => el.setAttribute('placeholder', text));
+}
+
 function row(label: string, onRemove: () => void): HTMLLIElement {
   const li = document.createElement('li');
   const text = document.createElement('span');
@@ -30,7 +45,7 @@ function row(label: string, onRemove: () => void): HTMLLIElement {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'remove';
-  button.textContent = 'Remove';
+  button.textContent = t('optRemove');
   button.addEventListener('click', onRemove);
   li.append(text, button);
   return li;
@@ -54,7 +69,7 @@ async function renderGranted(): Promise<void> {
   if (granted.length === 0) {
     const empty = document.createElement('li');
     empty.className = 'empty';
-    empty.textContent = 'No origins allowed yet.';
+    empty.textContent = t('optNoOrigins');
     grantedList.replaceChildren(empty);
     return;
   }
@@ -74,7 +89,7 @@ async function renderSites(): Promise<void> {
   if (disabledSites.length === 0) {
     const empty = document.createElement('li');
     empty.className = 'empty';
-    empty.textContent = 'No sites disabled.';
+    empty.textContent = t('optNoSites');
     siteList.replaceChildren(empty);
     return;
   }
@@ -100,19 +115,19 @@ grantForm.addEventListener('submit', async (event) => {
   try {
     origin = new URL(raw.includes('://') ? raw : `https://${raw}`).origin;
   } catch {
-    grantError.textContent = 'That is not a valid origin.';
+    grantError.textContent = t('optInvalidOrigin');
     grantError.hidden = false;
     return;
   }
   if (!origin.startsWith('http')) {
-    grantError.textContent = 'Only http and https origins can be granted.';
+    grantError.textContent = t('optOnlyHttp');
     grantError.hidden = false;
     return;
   }
 
   const granted = await browser.permissions.request({ origins: [`${origin}/*`] });
   if (!granted) {
-    grantError.textContent = 'Permission was declined.';
+    grantError.textContent = t('optPermissionDeclined');
     grantError.hidden = false;
     return;
   }
@@ -149,6 +164,7 @@ for (const input of themes) {
 }
 
 async function init(): Promise<void> {
+  localize();
   const settings = await readSettings();
   deepScan.checked = settings.deepScan;
   revealSecrets.checked = settings.revealSecrets;

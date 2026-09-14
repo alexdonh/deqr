@@ -1,0 +1,329 @@
+{
+  "extDescription": {
+    "message": "Reveal this QR Code - decode QR images on any page and inspect the payload before you trust it.",
+    "description": "Extension description, shown in the browser and in the store listing."
+  },
+  "extActionTitle": {
+    "message": "deQR - Reveal this QR Code",
+    "description": "Toolbar button tooltip."
+  },
+
+  "uiBadgeReveal": {
+    "message": "Reveal",
+    "description": "Caption on the badge that appears over a decoded QR image."
+  },
+  "uiBadgeRevealTitle": {
+    "message": "deQR - Reveal this QR Code",
+    "description": "Tooltip on the Reveal badge."
+  },
+  "uiBadgeAllow": {
+    "message": "Allow deQR",
+    "description": "Caption on the badge shown over an image deQR is not permitted to read."
+  },
+  "uiBadgeAllowTitle": {
+    "message": "deQR cannot read this image because it is served from $origin$ without CORS headers. Click to grant access to that origin.",
+    "placeholders": { "origin": { "content": "$1", "example": "https://cdn.example.com" } }
+  },
+  "uiDialogLabel": {
+    "message": "deQR - decoded QR code",
+    "description": "Accessible name of the reveal panel."
+  },
+  "uiChipDanger": { "message": "Do not open" },
+  "uiChipCaution": { "message": "Check first" },
+  "uiChipInfo": { "message": "No warnings" },
+  "uiClose": { "message": "Close" },
+  "uiDestination": {
+    "message": "This link actually goes to",
+    "description": "Label above the hostname the browser will really resolve."
+  },
+  "uiDisplaysAs": {
+    "message": "Displays as: $host$",
+    "description": "The hostname as it looks, when that differs from what resolves.",
+    "placeholders": { "host": { "content": "$1", "example": "аpple.com" } }
+  },
+  "uiRegisteredDomain": {
+    "message": "Registered domain: $domain$",
+    "placeholders": { "domain": { "content": "$1", "example": "example.co.uk" } }
+  },
+  "uiShow": {
+    "message": "Show",
+    "description": "Button that reveals a masked secret such as a Wi-Fi password."
+  },
+  "uiTruncated": {
+    "message": "Showing the first $shown$ of $total$ characters",
+    "description": "Note under a payload too long to print in full.",
+    "placeholders": {
+      "shown": { "content": "$1", "example": "4096" },
+      "total": { "content": "$2", "example": "9210" }
+    }
+  },
+  "uiShowRaw": { "message": "Show raw payload" },
+  "uiRawSecretNote": { "message": "contains the secret shown above" },
+  "uiCopyText": { "message": "Copy text" },
+  "uiCopied": { "message": "Copied" },
+  "uiCopyBlocked": { "message": "Copy blocked" },
+  "uiOpen": { "message": "Open" },
+  "uiOpenAnyway": {
+    "message": "Open anyway",
+    "description": "Open button for a payload that carries a warning."
+  },
+  "uiOpenConfirm": {
+    "message": "Really open - click again",
+    "description": "Armed state of the Open button; the second click navigates."
+  },
+  "uiWillNotOpen": {
+    "message": "deQR will not open this. Copy the text if you need to inspect it."
+  },
+
+  "optTitle": { "message": "deQR - Settings" },
+  "optTagline": { "message": "Reveal this QR Code." },
+  "optImageAccess": { "message": "Image access" },
+  "optImageAccessHelp": {
+    "message": "deQR reads QR codes out of the page itself and needs no special access for images hosted by the site you are visiting. Images served from another origin without CORS headers cannot be read at all - the browser blocks it. Add those origins here to let deQR fetch them directly. Nothing is sent anywhere; the fetch happens locally in your browser."
+  },
+  "optOriginLabel": { "message": "Origin to allow" },
+  "optAllow": { "message": "Allow" },
+  "optScanning": { "message": "Scanning" },
+  "optDeepScan": { "message": "Deep scan" },
+  "optDeepScanHelp": {
+    "message": "Send every image to the decoder instead of pre-screening for QR finder patterns first. Catches blurred, skewed, and photographed codes that the fast filter misses. Noticeably slower on image-heavy pages."
+  },
+  "optRevealSecrets": { "message": "Show secrets immediately" },
+  "optRevealSecretsHelp": {
+    "message": "Wi-Fi passwords and two-factor seeds are hidden behind a click by default, so they are not exposed to anyone looking at your screen."
+  },
+  "optAppearance": { "message": "Appearance" },
+  "optAppearanceHelp": {
+    "message": "Applies to this page and to the reveal panel deQR opens over a page. Open tabs pick up a change straight away."
+  },
+  "optThemeSystem": { "message": "System" },
+  "optThemeSystemHelp": { "message": "Follow whatever your operating system is set to." },
+  "optThemeLight": { "message": "Light" },
+  "optThemeDark": { "message": "Dark" },
+  "optDisabledSites": { "message": "Disabled sites" },
+  "optDisabledSitesHelp": { "message": "deQR does not scan pages on these hostnames." },
+  "optHostnameLabel": { "message": "Hostname to disable" },
+  "optAdd": { "message": "Add" },
+  "optFooter": {
+    "message": "deQR decodes entirely on your machine. It makes no network requests of its own, sends no telemetry, and never transmits a decoded payload."
+  },
+  "optRemove": { "message": "Remove" },
+  "optNoOrigins": { "message": "No origins allowed yet." },
+  "optNoSites": { "message": "No sites disabled." },
+  "optInvalidOrigin": { "message": "That is not a valid origin." },
+  "optOnlyHttp": { "message": "Only http and https origins can be granted." },
+  "optPermissionDeclined": { "message": "Permission was declined." },
+
+  "payloadLink": { "message": "Link" },
+  "payloadEmail": { "message": "Email" },
+  "payloadPhone": { "message": "Phone number" },
+  "payloadSms": { "message": "Text message" },
+  "payloadWhatsapp": { "message": "WhatsApp message" },
+  "payloadWhatsappGroup": { "message": "WhatsApp group invite" },
+  "payloadWifi": { "message": "Wi-Fi network" },
+  "payloadContact": { "message": "Contact card" },
+  "payloadCalendar": { "message": "Calendar event" },
+  "payloadLocation": { "message": "Location" },
+  "payloadOtpauth": { "message": "Two-factor authentication seed" },
+  "payloadCrypto": {
+    "message": "$network$ transfer",
+    "description": "Panel heading for a cryptocurrency payment. The network name is a proper noun and is never translated.",
+    "placeholders": { "network": { "content": "$1", "example": "Bitcoin" } }
+  },
+  "payloadPayment": { "message": "Payment request" },
+  "payloadText": { "message": "Plain text" },
+
+  "fieldNetwork": { "message": "Network" },
+  "fieldSecurity": { "message": "Security" },
+  "fieldPassword": { "message": "Password" },
+  "fieldHiddenNetwork": { "message": "Hidden network" },
+  "fieldName": { "message": "Name" },
+  "fieldPhone": { "message": "Phone" },
+  "fieldEmail": { "message": "Email" },
+  "fieldAddress": { "message": "Address" },
+  "fieldOrganization": { "message": "Organization" },
+  "fieldWebsite": { "message": "Website" },
+  "fieldNote": { "message": "Note" },
+  "fieldTitle": { "message": "Title" },
+  "fieldEvent": { "message": "Event" },
+  "fieldLocation": { "message": "Location" },
+  "fieldStarts": { "message": "Starts" },
+  "fieldEnds": { "message": "Ends" },
+  "fieldDescription": { "message": "Description" },
+  "fieldType": { "message": "Type" },
+  "fieldIssuer": { "message": "Issuer" },
+  "fieldAccount": { "message": "Account" },
+  "fieldSharedSecret": { "message": "Shared secret" },
+  "fieldMerchant": { "message": "Merchant" },
+  "fieldAmount": { "message": "Amount" },
+  "fieldCity": { "message": "City" },
+  "fieldCountry": { "message": "Country" },
+  "fieldEmvAccount": {
+    "message": "Account (tag $tag$)",
+    "description": "EMVCo payment account. The tag is a two-digit number from the spec.",
+    "placeholders": { "tag": { "content": "$1", "example": "38" } }
+  },
+  "fieldTokenContract": { "message": "Token contract" },
+  "fieldFunction": { "message": "Function" },
+  "fieldRecipient": { "message": "Recipient" },
+  "fieldChainId": { "message": "Chain ID" },
+  "fieldLabel": { "message": "Label" },
+  "fieldMessage": { "message": "Message" },
+  "fieldGroupInvite": { "message": "Group invite" },
+  "fieldNumber": { "message": "Number" },
+  "fieldTo": { "message": "To" },
+  "fieldSubject": { "message": "Subject" },
+  "fieldBody": { "message": "Body" },
+  "fieldCc": { "message": "Cc" },
+  "fieldBcc": { "message": "Bcc" },
+  "fieldCoordinates": { "message": "Coordinates" },
+  "fieldPayeeAddress": { "message": "Payee address" },
+  "fieldPayeeName": { "message": "Payee name" },
+  "fieldCurrency": { "message": "Currency" },
+  "fieldText": { "message": "Text" },
+  "fieldVerbatim": {
+    "message": "$name$",
+    "description": "A field name taken straight from the payload, such as an unrecognized vCard tag. Nothing to translate.",
+    "placeholders": { "name": { "content": "$1", "example": "BDAY" } }
+  },
+
+  "valueSecurityNone": {
+    "message": "none",
+    "description": "Wi-Fi security type when the network is open."
+  },
+  "valueYes": { "message": "yes" },
+  "valueHotp": { "message": "HOTP counter" },
+  "valueTotp": { "message": "TOTP time-based" },
+  "valueEmvAmount": {
+    "message": "$amount$ (currency code $currency$)",
+    "placeholders": {
+      "amount": { "content": "$1", "example": "100000" },
+      "currency": { "content": "$2", "example": "704" }
+    }
+  },
+  "valueAmountUnset": { "message": "not fixed - set by the payer" },
+
+  "scriptLatin": { "message": "Latin" },
+  "scriptCyrillic": { "message": "Cyrillic" },
+  "scriptGreek": { "message": "Greek" },
+  "scriptHan": { "message": "Han" },
+  "scriptArabic": { "message": "Arabic" },
+  "scriptHebrew": { "message": "Hebrew" },
+  "scriptArmenian": { "message": "Armenian" },
+  "scriptCherokee": { "message": "Cherokee" },
+
+  "reasonBlockedSchemeTitle": {
+    "message": "Executable or local-resource link ($scheme$:)",
+    "placeholders": { "scheme": { "content": "$1", "example": "javascript" } }
+  },
+  "reasonBlockedSchemeDetail": {
+    "message": "This is not a web address. Opening it would run code or read a local resource in your browser. deQR will not open it."
+  },
+  "reasonUserinfoTitle": { "message": "The visible domain is not where this goes" },
+  "reasonUserinfoDetail": {
+    "message": "Everything before the \"@\" is ignored by the browser. This link resolves to $host$, not to $shown$.",
+    "placeholders": {
+      "host": { "content": "$1", "example": "evil.tld" },
+      "shown": { "content": "$2", "example": "paypal" }
+    }
+  },
+  "reasonUserinfoDetailUnnamed": {
+    "message": "Everything before the \"@\" is ignored by the browser. This link resolves to $host$, not to the name shown first.",
+    "description": "Used when the part before the @ has no readable name to quote back.",
+    "placeholders": { "host": { "content": "$1", "example": "evil.tld" } }
+  },
+  "reasonMixedScriptTitle": { "message": "Domain mixes alphabets" },
+  "reasonMixedScriptDetail": {
+    "message": "The hostname reads as \"$host$\", which combines $scripts$ characters. Real domains almost never do this; lookalike domains do. The browser will resolve it as $ascii$.",
+    "placeholders": {
+      "host": { "content": "$1", "example": "аpple.com" },
+      "scripts": { "content": "$2", "example": "Latin and Cyrillic" },
+      "ascii": { "content": "$3", "example": "xn--pple-43d.com" }
+    }
+  },
+  "reasonConfusableTitle": { "message": "Domain uses letters that imitate Latin ones" },
+  "reasonConfusableDetail": {
+    "message": "Characters in this hostname look like ordinary letters but are not. The browser will resolve it as $ascii$. If you expected an all-Latin address, this is not it.",
+    "placeholders": { "ascii": { "content": "$1", "example": "xn--80ak6aa92e.com" } }
+  },
+  "reasonPunycodeTitle": { "message": "Internationalized domain" },
+  "reasonPunycodeDetail": {
+    "message": "Resolves to $ascii$. Verify this is the domain you expect.",
+    "placeholders": { "ascii": { "content": "$1", "example": "xn--80ak6aa92e.com" } }
+  },
+  "reasonInsecureTitle": { "message": "Unencrypted connection (http)" },
+  "reasonInsecureDetail": {
+    "message": "Anything you send to this page can be read and modified in transit."
+  },
+  "reasonShortenerTitle": { "message": "Shortened link - real destination hidden" },
+  "reasonShortenerDetail": {
+    "message": "$domain$ forwards somewhere else. Nothing in this QR code tells you where.",
+    "placeholders": { "domain": { "content": "$1", "example": "bit.ly" } }
+  },
+  "reasonIpHostTitle": { "message": "Numeric address instead of a domain name" },
+  "reasonIpHostDetail": {
+    "message": "Legitimate services are normally reached by domain name."
+  },
+  "reasonPortTitle": {
+    "message": "Non-standard port ($port$)",
+    "placeholders": { "port": { "content": "$1", "example": "8080" } }
+  },
+  "reasonPortDetail": {
+    "message": "Web services rarely ask you to connect on an unusual port."
+  },
+  "reasonNestedUrlTitle": { "message": "Link forwards to another address" },
+  "reasonNestedUrlDetail": {
+    "message": "$host$ is only the first hop. The \"$param$\" parameter sends you to: $target$",
+    "placeholders": {
+      "host": { "content": "$1", "example": "example.com" },
+      "param": { "content": "$2", "example": "redirect" },
+      "target": { "content": "$3", "example": "https://evil.tld" }
+    }
+  },
+  "reasonLongUrlTitle": { "message": "Unusually long address" },
+  "reasonLongUrlDetail": {
+    "message": "$count$ characters. Length is often used to push the real domain out of view.",
+    "placeholders": { "count": { "content": "$1", "example": "812" } }
+  },
+  "reasonTotpSeedTitle": { "message": "This is a two-factor authentication seed" },
+  "reasonTotpSeedDetail": {
+    "message": "Scanning this with an authenticator app gives that app a permanent code generator for the account. If you did not just ask a service to enrol a new authenticator, do not use it."
+  },
+  "reasonWifiTitle": { "message": "Joins a wireless network" },
+  "reasonWifiDetail": {
+    "message": "Whoever runs the network can see and alter unencrypted traffic. Only join networks you know."
+  },
+  "reasonPaymentTitle": { "message": "This is a payment instruction" },
+  "reasonPaymentDetail": {
+    "message": "Check the recipient and amount below against the merchant you are actually dealing with. These transfers are normally irreversible, and swapping the payment QR is a common scam."
+  },
+  "reasonPremiumRateTitle": { "message": "Number may be premium-rate" },
+  "reasonPremiumRateDetail": {
+    "message": "$number$ matches a premium-rate prefix. Calls or messages to these numbers can be charged at a high rate.",
+    "placeholders": { "number": { "content": "$1", "example": "+1900555000" } }
+  },
+  "reasonPrefilledSmsTitle": { "message": "Sends a pre-written message on your behalf" },
+  "reasonPrefilledSmsDetail": {
+    "message": "Read the message text below before sending. Premium shortcodes bill on receipt."
+  },
+  "reasonGroupInviteTitle": { "message": "Joins a WhatsApp group" },
+  "reasonGroupInviteDetail": {
+    "message": "Joining shows your phone number and profile to everyone already in the group, and there is no way to tell from the invite who that is."
+  },
+  "reasonPrefilledWhatsappTitle": { "message": "Opens a chat with a pre-written message" },
+  "reasonPrefilledWhatsappDetail": {
+    "message": "Both the recipient and the message text were chosen by whoever made this QR code. Check the number below - starting the chat reveals your number to it."
+  },
+  "reasonPrefilledMailTitle": { "message": "Pre-written email" },
+  "reasonPrefilledMailDetail": {
+    "message": "The message body was chosen by whoever made this QR code, not by you."
+  },
+  "reasonBidiTitle": { "message": "Contains text-direction override characters" },
+  "reasonBidiDetail": {
+    "message": "Invisible characters that reorder how text is displayed. They are used to make a hostile address read as a harmless one. They have been removed from the text shown here."
+  },
+  "reasonZeroWidthTitle": { "message": "Contains invisible characters" },
+  "reasonZeroWidthDetail": {
+    "message": "Zero-width characters are present. They cannot be seen but change what the text actually is."
+  }
+}

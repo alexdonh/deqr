@@ -4,6 +4,7 @@
 
 import { parse as parseDomain } from 'tldts';
 
+import type { MessageKey } from './i18n';
 import { decodePunycodeHost } from './punycode';
 
 export type PayloadKind =
@@ -23,8 +24,11 @@ export type PayloadKind =
   | 'text';
 
 export interface Field {
-  name: string;
+  key: MessageKey;
+  args?: string[];
   value: string;
+  fallback?: MessageKey;
+  fallbackArgs?: string[];
   /** Masked in the UI until the user explicitly reveals it. */
   secret?: boolean;
 }
@@ -54,8 +58,8 @@ export interface UrlParts {
 
 export interface Payload {
   kind: PayloadKind;
-  /** Short human label for the panel header. */
-  label: string;
+  labelKey: MessageKey;
+  labelArgs?: string[];
   fields: Field[];
   url?: UrlParts;
 }
@@ -129,50 +133,62 @@ function classifyWifi(text: string): Payload {
     entries.set(part.slice(0, colon).toUpperCase(), unescape(part.slice(colon + 1)));
   }
   const fields: Field[] = [];
-  if (entries.has('S')) fields.push({ name: 'Network', value: entries.get('S')! });
-  if (entries.has('T')) fields.push({ name: 'Security', value: entries.get('T')! || 'none' });
-  if (entries.has('P')) fields.push({ name: 'Password', value: entries.get('P')!, secret: true });
-  if (entries.get('H') === 'true') fields.push({ name: 'Hidden network', value: 'yes' });
-  return { kind: 'wifi', label: 'Wi-Fi network', fields };
+  if (entries.has('S')) fields.push({ key: 'fieldNetwork', value: entries.get('S')! });
+  if (entries.has('T')) {
+    fields.push({ key: 'fieldSecurity', value: entries.get('T')!, fallback: 'valueSecurityNone' });
+  }
+  if (entries.has('P')) fields.push({ key: 'fieldPassword', value: entries.get('P')!, secret: true });
+  if (entries.get('H') === 'true') fields.push({ key: 'fieldHiddenNetwork', value: '', fallback: 'valueYes' });
+  return { kind: 'wifi', labelKey: 'payloadWifi', fields };
 }
 
 /** `MECARD:N:Doe,John;TEL:123;EMAIL:a@b;;` */
 function classifyMecard(text: string): Payload {
-  const names: Record<string, string> = {
-    N: 'Name',
-    TEL: 'Phone',
-    EMAIL: 'Email',
-    ADR: 'Address',
-    ORG: 'Organization',
-    URL: 'Website',
-    NOTE: 'Note',
+  const names: Record<string, MessageKey> = {
+    N: 'fieldName',
+    TEL: 'fieldPhone',
+    EMAIL: 'fieldEmail',
+    ADR: 'fieldAddress',
+    ORG: 'fieldOrganization',
+    URL: 'fieldWebsite',
+    NOTE: 'fieldNote',
   };
   const fields: Field[] = [];
   for (const part of splitFields(text.slice('MECARD:'.length))) {
     const colon = part.indexOf(':');
     if (colon <= 0) continue;
     const key = part.slice(0, colon).toUpperCase();
-    fields.push({ name: names[key] ?? key, value: unescape(part.slice(colon + 1)) });
+    // An unrecognized tag is a protocol token, not prose: show it as it came.
+    const known = names[key];
+    fields.push(
+      known
+        ? { key: known, value: unescape(part.slice(colon + 1)) }
+        : { key: 'fieldVerbatim', args: [key], value: unescape(part.slice(colon + 1)) },
+    );
   }
-  return { kind: 'contact', label: 'Contact card', fields };
+  return { kind: 'contact', labelKey: 'payloadContact', fields };
 }
 
 /** vCard / iCalendar: `KEY;PARAM:value` per unfolded line. */
-function classifyIcalLike(text: string, kind: 'contact' | 'calendar', label: string): Payload {
-  const interesting: Record<string, string> = {
-    FN: 'Name',
-    N: 'Name',
-    TEL: 'Phone',
-    EMAIL: 'Email',
-    ORG: 'Organization',
-    TITLE: 'Title',
-    URL: 'Website',
-    ADR: 'Address',
-    SUMMARY: 'Event',
-    LOCATION: 'Location',
-    DTSTART: 'Starts',
-    DTEND: 'Ends',
-    DESCRIPTION: 'Description',
+function classifyIcalLike(
+  text: string,
+  kind: 'contact' | 'calendar',
+  labelKey: MessageKey,
+): Payload {
+  const interesting: Record<string, MessageKey> = {
+    FN: 'fieldName',
+    N: 'fieldName',
+    TEL: 'fieldPhone',
+    EMAIL: 'fieldEmail',
+    ORG: 'fieldOrganization',
+    TITLE: 'fieldTitle',
+    URL: 'fieldWebsite',
+    ADR: 'fieldAddress',
+    SUMMARY: 'fieldEvent',
+    LOCATION: 'fieldLocation',
+    DTSTART: 'fieldStarts',
+    DTEND: 'fieldEnds',
+    DESCRIPTION: 'fieldDescription',
   };
   const fields: Field[] = [];
   // Unfold continuation lines (RFC 5545/6350: a leading space continues the previous line).
@@ -182,9 +198,9 @@ function classifyIcalLike(text: string, kind: 'contact' | 'calendar', label: str
     if (colon <= 0) continue;
     const key = line.slice(0, colon).split(';')[0]!.toUpperCase();
     const name = interesting[key];
-    if (name) fields.push({ name, value: line.slice(colon + 1).trim() });
+    if (name) fields.push({ key: name, value: line.slice(colon + 1).trim() });
   }
-  return { kind, label, fields };
+  return { kind, labelKey, fields };
 }
 
 /** `otpauth://totp/Issuer:account?secret=BASE32&issuer=Issuer` */
@@ -192,13 +208,17 @@ function classifyOtpauth(url: URL): Payload {
   const params = url.searchParams;
   const path = decodeURIComponent(url.pathname.replace(/^\//, ''));
   const fields: Field[] = [];
-  fields.push({ name: 'Type', value: url.host === 'hotp' ? 'HOTP counter' : 'TOTP time-based' });
+  fields.push({
+    key: 'fieldType',
+    value: '',
+    fallback: url.host === 'hotp' ? 'valueHotp' : 'valueTotp',
+  });
   const issuer = params.get('issuer') ?? (path.includes(':') ? path.split(':')[0]! : '');
-  if (issuer) fields.push({ name: 'Issuer', value: issuer });
-  fields.push({ name: 'Account', value: path.includes(':') ? path.slice(path.indexOf(':') + 1) : path });
+  if (issuer) fields.push({ key: 'fieldIssuer', value: issuer });
+  fields.push({ key: 'fieldAccount', value: path.includes(':') ? path.slice(path.indexOf(':') + 1) : path });
   const secret = params.get('secret');
-  if (secret) fields.push({ name: 'Shared secret', value: secret, secret: true });
-  return { kind: 'otpauth', label: 'Two-factor authentication seed', fields };
+  if (secret) fields.push({ key: 'fieldSharedSecret', value: secret, secret: true });
+  return { kind: 'otpauth', labelKey: 'payloadOtpauth', fields };
 }
 
 /**
@@ -227,17 +247,21 @@ function classifyEmv(tlv: Map<string, string>): Payload {
   const currency = tlv.get('53');
   const city = tlv.get('60');
   const country = tlv.get('58');
-  if (name) fields.push({ name: 'Merchant', value: name });
-  fields.push({ name: 'Amount', value: amount ? `${amount} (currency code ${currency ?? '?'})` : 'not fixed - set by the payer' });
-  if (city) fields.push({ name: 'City', value: city });
-  if (country) fields.push({ name: 'Country', value: country });
+  if (name) fields.push({ key: 'fieldMerchant', value: name });
+  fields.push(
+    amount
+      ? { key: 'fieldAmount', value: '', fallback: 'valueEmvAmount', fallbackArgs: [amount, currency ?? '?'] }
+      : { key: 'fieldAmount', value: '', fallback: 'valueAmountUnset' },
+  );
+  if (city) fields.push({ key: 'fieldCity', value: city });
+  if (country) fields.push({ key: 'fieldCountry', value: country });
   // Tags 26-51 carry the scheme-specific account identifiers (bank, wallet, IBAN).
   for (let t = 26; t <= 51; t++) {
     const key = String(t).padStart(2, '0');
     const value = tlv.get(key);
-    if (value) fields.push({ name: `Account (tag ${key})`, value });
+    if (value) fields.push({ key: 'fieldEmvAccount', args: [key], value });
   }
-  return { kind: 'emv', label: 'Payment request', fields };
+  return { kind: 'emv', labelKey: 'payloadPayment', fields };
 }
 
 // Maps crypto URI schemes to display names.
@@ -291,27 +315,27 @@ function classifyCrypto(scheme: string, network: string, text: string): Payload 
   const [address, afterAt] = (target ?? '').replace(/^pay-/i, '').split('@');
   const [chainId, fn] = (afterAt ?? '').split('/');
 
-  const fields: Field[] = [{ name: 'Network', value: network }];
+  const fields: Field[] = [{ key: 'fieldNetwork', value: network }];
   // With a contract call the address in the path is the token, and the money
   // goes to the `address` parameter. Naming both stops them being read as one.
-  fields.push({ name: fn ? 'Token contract' : 'Address', value: address ?? '' });
+  fields.push({ key: fn ? 'fieldTokenContract' : 'fieldAddress', value: address ?? '' });
   if (fn) {
-    fields.push({ name: 'Function', value: fn });
+    fields.push({ key: 'fieldFunction', value: fn });
     const recipient = params.get('address');
-    if (recipient) fields.push({ name: 'Recipient', value: recipient });
+    if (recipient) fields.push({ key: 'fieldRecipient', value: recipient });
   }
-  if (chainId) fields.push({ name: 'Chain ID', value: chainId });
+  if (chainId) fields.push({ key: 'fieldChainId', value: chainId });
   // BIP-21 says `amount`; EIP-681 uses `value` in wei and `uint256` for tokens.
   const amount = params.get('amount') ?? params.get('value') ?? params.get('uint256');
-  if (amount) fields.push({ name: 'Amount', value: amount });
-  for (const [key, name] of [
-    ['label', 'Label'],
-    ['message', 'Message'],
+  if (amount) fields.push({ key: 'fieldAmount', value: amount });
+  for (const [param, key] of [
+    ['label', 'fieldLabel'],
+    ['message', 'fieldMessage'],
   ] as const) {
-    const value = params.get(key);
-    if (value) fields.push({ name, value });
+    const value = params.get(param);
+    if (value) fields.push({ key, value });
   }
-  return { kind: 'crypto', label: `${network} transfer`, fields };
+  return { kind: 'crypto', labelKey: 'payloadCrypto', labelArgs: [network], fields };
 }
 
 /** Hosts whose whole purpose is to open a WhatsApp chat. */
@@ -332,24 +356,24 @@ function classifyWhatsapp(url: UrlParts): Payload {
   if (url.asciiHost === 'chat.whatsapp.com') {
     return {
       kind: 'whatsapp',
-      label: 'WhatsApp group invite',
-      fields: [{ name: 'Group invite', value: path }],
+      labelKey: 'payloadWhatsappGroup',
+      fields: [{ key: 'fieldGroupInvite', value: path }],
       url,
     };
   }
 
   const fields: Field[] = [];
   const number = params.get('phone') ?? path;
-  if (number) fields.push({ name: 'Number', value: number });
+  if (number) fields.push({ key: 'fieldNumber', value: number });
   const message = params.get('text');
-  if (message) fields.push({ name: 'Message', value: message });
-  return { kind: 'whatsapp', label: 'WhatsApp message', fields, url };
+  if (message) fields.push({ key: 'fieldMessage', value: message });
+  return { kind: 'whatsapp', labelKey: 'payloadWhatsapp', fields, url };
 }
 
 /** An https link that is really a WhatsApp chat gets the chat panel, not a bare link. */
 function fromUrl(url: UrlParts): Payload {
   if (WHATSAPP_HOSTS.has(url.asciiHost)) return classifyWhatsapp(url);
-  return { kind: 'url', label: 'Link', fields: [{ name: 'Address', value: url.href }], url };
+  return { kind: 'url', labelKey: 'payloadLink', fields: [{ key: 'fieldAddress', value: url.href }], url };
 }
 
 export function classify(text: string): Payload {
@@ -358,9 +382,9 @@ export function classify(text: string): Payload {
 
   if (upper.startsWith('WIFI:')) return classifyWifi(trimmed);
   if (upper.startsWith('MECARD:')) return classifyMecard(trimmed);
-  if (upper.startsWith('BEGIN:VCARD')) return classifyIcalLike(trimmed, 'contact', 'Contact card');
+  if (upper.startsWith('BEGIN:VCARD')) return classifyIcalLike(trimmed, 'contact', 'payloadContact');
   if (upper.startsWith('BEGIN:VCALENDAR') || upper.startsWith('BEGIN:VEVENT')) {
-    return classifyIcalLike(trimmed, 'calendar', 'Calendar event');
+    return classifyIcalLike(trimmed, 'calendar', 'payloadCalendar');
   }
 
   // EMVCo payloads always open with payload-format-indicator 00 02 01.
@@ -382,19 +406,27 @@ export function classify(text: string): Payload {
   if (scheme === 'mailto') {
     const url = parseUrl(trimmed);
     const params = new URLSearchParams(url?.rest.split('?')[1] ?? '');
-    const fields: Field[] = [{ name: 'To', value: decodeURIComponent(trimmed.slice(7).split('?')[0]!) }];
-    for (const key of ['subject', 'body', 'cc', 'bcc'] as const) {
-      const value = params.get(key);
-      if (value) fields.push({ name: key[0]!.toUpperCase() + key.slice(1), value });
+    const fields: Field[] = [
+      { key: 'fieldTo', value: decodeURIComponent(trimmed.slice(7).split('?')[0]!) },
+    ];
+    // An explicit map, not a capitalized param name: the names are translated.
+    for (const [param, key] of [
+      ['subject', 'fieldSubject'],
+      ['body', 'fieldBody'],
+      ['cc', 'fieldCc'],
+      ['bcc', 'fieldBcc'],
+    ] as const) {
+      const value = params.get(param);
+      if (value) fields.push({ key, value });
     }
-    return { kind: 'mailto', label: 'Email', fields, url };
+    return { kind: 'mailto', labelKey: 'payloadEmail', fields, url };
   }
 
   if (scheme === 'tel') {
     return {
       kind: 'tel',
-      label: 'Phone number',
-      fields: [{ name: 'Number', value: trimmed.slice(4) }],
+      labelKey: 'payloadPhone',
+      fields: [{ key: 'fieldNumber', value: trimmed.slice(4) }],
     };
   }
 
@@ -403,16 +435,16 @@ export function classify(text: string): Payload {
     // Both `sms:+123?body=x` and `SMSTO:+123:x` are in the wild.
     const [target, ...restParts] = body.split(/[?:]/);
     const message = restParts.join(':').replace(/^body=/, '');
-    const fields: Field[] = [{ name: 'Number', value: target ?? '' }];
-    if (message) fields.push({ name: 'Message', value: decodeURIComponent(message) });
-    return { kind: 'sms', label: 'Text message', fields };
+    const fields: Field[] = [{ key: 'fieldNumber', value: target ?? '' }];
+    if (message) fields.push({ key: 'fieldMessage', value: decodeURIComponent(message) });
+    return { kind: 'sms', labelKey: 'payloadSms', fields };
   }
 
   if (scheme === 'geo') {
     return {
       kind: 'geo',
-      label: 'Location',
-      fields: [{ name: 'Coordinates', value: trimmed.slice(4) }],
+      labelKey: 'payloadLocation',
+      fields: [{ key: 'fieldCoordinates', value: trimmed.slice(4) }],
     };
   }
 
@@ -420,22 +452,28 @@ export function classify(text: string): Payload {
     const url = parseUrl(trimmed);
     const params = new URLSearchParams(url?.rest.split('?')[1] ?? '');
     const fields: Field[] = [];
-    const map: Record<string, string> = { pa: 'Payee address', pn: 'Payee name', am: 'Amount', cu: 'Currency', tn: 'Note' };
-    for (const [key, name] of Object.entries(map)) {
-      const value = params.get(key);
-      if (value) fields.push({ name, value });
+    const map: Record<string, MessageKey> = {
+      pa: 'fieldPayeeAddress',
+      pn: 'fieldPayeeName',
+      am: 'fieldAmount',
+      cu: 'fieldCurrency',
+      tn: 'fieldNote',
+    };
+    for (const [param, key] of Object.entries(map)) {
+      const value = params.get(param);
+      if (value) fields.push({ key, value });
     }
-    return { kind: 'upi', label: 'Payment request', fields, url };
+    return { kind: 'upi', labelKey: 'payloadPayment', fields, url };
   }
 
   if (scheme === 'whatsapp') {
     const params = new URLSearchParams(trimmed.split('?')[1] ?? '');
     const fields: Field[] = [];
     const number = params.get('phone');
-    if (number) fields.push({ name: 'Number', value: number });
+    if (number) fields.push({ key: 'fieldNumber', value: number });
     const message = params.get('text');
-    if (message) fields.push({ name: 'Message', value: message });
-    return { kind: 'whatsapp', label: 'WhatsApp message', fields };
+    if (message) fields.push({ key: 'fieldMessage', value: message });
+    return { kind: 'whatsapp', labelKey: 'payloadWhatsapp', fields };
   }
 
   if (scheme && CRYPTO_NETWORKS[scheme]) {
@@ -453,5 +491,5 @@ export function classify(text: string): Payload {
     if (url) return fromUrl(url);
   }
 
-  return { kind: 'text', label: 'Plain text', fields: [{ name: 'Text', value: trimmed }] };
+  return { kind: 'text', labelKey: 'payloadText', fields: [{ key: 'fieldText', value: trimmed }] };
 }

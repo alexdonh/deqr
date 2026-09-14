@@ -68,7 +68,7 @@ describe('caution - openable, but never on the first click', () => {
     expect(result.reasons.map((r) => r.code)).toContain('nested-url');
     // The detail has to actually name the second hop, not just warn abstractly.
     const reason = result.reasons.find((r) => r.code === 'nested-url');
-    expect(reason?.detail).toContain('evil.tld');
+    expect(reason?.detailArgs?.join(' ')).toContain('evil.tld');
   });
 
   it('flags plain http', () => {
@@ -87,7 +87,7 @@ describe('caution - openable, but never on the first click', () => {
     expect(result.payload.kind).toBe('otpauth');
     expect(result.reasons.map((r) => r.code)).toContain('totp-seed');
     expect(result.openable).toBe(false);
-    const secret = result.payload.fields.find((f) => f.name === 'Shared secret');
+    const secret = result.payload.fields.find((f) => f.key === 'fieldSharedSecret');
     expect(secret?.value).toBe('JBSWY3DPEHPK3PXP');
     expect(secret?.secret).toBe(true);
   });
@@ -95,7 +95,7 @@ describe('caution - openable, but never on the first click', () => {
   it('masks a Wi-Fi password', () => {
     const result = check('WIFI:T:WPA;S:CoffeeShop;P:hunter2\\;pass;H:true;;');
     expect(result.payload.kind).toBe('wifi');
-    const password = result.payload.fields.find((f) => f.name === 'Password');
+    const password = result.payload.fields.find((f) => f.key === 'fieldPassword');
     // The escaped semicolon belongs to the password, not the field separator.
     expect(password?.value).toBe('hunter2;pass');
     expect(password?.secret).toBe(true);
@@ -117,7 +117,7 @@ describe('caution - openable, but never on the first click', () => {
     const result = check(text);
     expect(result.payload.kind).toBe('emv');
     expect(result.reasons.map((r) => r.code)).toContain('payment');
-    expect(result.payload.fields.find((f) => f.name === 'Merchant')?.value).toBe('MY STORE');
+    expect(result.payload.fields.find((f) => f.key === 'fieldMerchant')?.value).toBe('MY STORE');
   });
 
   it('warns on a crypto transfer', () => {
@@ -140,8 +140,8 @@ describe('caution - openable, but never on the first click', () => {
   ])('reads the number and message out of %s', (text, number) => {
     const result = check(text);
     expect(result.payload.kind).toBe('whatsapp');
-    expect(result.payload.fields.find((f) => f.name === 'Number')?.value).toBe(number);
-    expect(result.payload.fields.find((f) => f.name === 'Message')?.value).toBe('Hello');
+    expect(result.payload.fields.find((f) => f.key === 'fieldNumber')?.value).toBe(number);
+    expect(result.payload.fields.find((f) => f.key === 'fieldMessage')?.value).toBe('Hello');
     expect(codes(text)).toContain('prefilled-message');
     // Starting a chat is a normal thing to want to do.
     expect(result.openable).toBe(true);
@@ -165,7 +165,7 @@ describe('cryptocurrency payloads', () => {
   ])('names the network for %s', (text, network) => {
     const result = check(text);
     expect(result.payload.kind).toBe('crypto');
-    expect(result.payload.fields.find((f) => f.name === 'Network')?.value).toBe(network);
+    expect(result.payload.fields.find((f) => f.key === 'fieldNetwork')?.value).toBe(network);
     // Payment is always a caution, and deQR never opens a wallet for you.
     expect(codes(text)).toContain('payment');
     expect(result.openable).toBe(false);
@@ -173,11 +173,11 @@ describe('cryptocurrency payloads', () => {
 
   it('reads BIP-21 amount, label and message', () => {
     const { payload } = check('bitcoin:bc1qexample?amount=0.05&label=Cafe&message=Table%204');
-    const field = (name: string) => payload.fields.find((f) => f.name === name)?.value;
-    expect(field('Address')).toBe('bc1qexample');
-    expect(field('Amount')).toBe('0.05');
-    expect(field('Label')).toBe('Cafe');
-    expect(field('Message')).toBe('Table 4');
+    const field = (key: string) => payload.fields.find((f) => f.key === key)?.value;
+    expect(field('fieldAddress')).toBe('bc1qexample');
+    expect(field('fieldAmount')).toBe('0.05');
+    expect(field('fieldLabel')).toBe('Cafe');
+    expect(field('fieldMessage')).toBe('Table 4');
   });
 
   it('separates the token contract from the recipient in an EIP-681 call', () => {
@@ -186,12 +186,12 @@ describe('cryptocurrency payloads', () => {
     const { payload } = check(
       'ethereum:0xTOKEN@1/transfer?address=0xRECIPIENT&uint256=1e18',
     );
-    const field = (name: string) => payload.fields.find((f) => f.name === name)?.value;
-    expect(field('Token contract')).toBe('0xTOKEN');
-    expect(field('Function')).toBe('transfer');
-    expect(field('Recipient')).toBe('0xRECIPIENT');
-    expect(field('Chain ID')).toBe('1');
-    expect(field('Amount')).toBe('1e18');
+    const field = (key: string) => payload.fields.find((f) => f.key === key)?.value;
+    expect(field('fieldTokenContract')).toBe('0xTOKEN');
+    expect(field('fieldFunction')).toBe('transfer');
+    expect(field('fieldRecipient')).toBe('0xRECIPIENT');
+    expect(field('fieldChainId')).toBe('1');
+    expect(field('fieldAmount')).toBe('1e18');
   });
 });
 
