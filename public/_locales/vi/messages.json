@@ -108,6 +108,7 @@
   "fieldHiddenNetwork": { "message": "Mạng ẩn" },
   "fieldName": { "message": "Tên" },
   "fieldPhone": { "message": "Điện thoại" },
+  "fieldFax": { "message": "Fax" },
   "fieldEmail": { "message": "Email" },
   "fieldAddress": { "message": "Địa chỉ" },
   "fieldOrganization": { "message": "Tổ chức" },

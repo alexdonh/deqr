@@ -139,6 +139,7 @@
   "fieldHiddenNetwork": { "message": "Hidden network" },
   "fieldName": { "message": "Name" },
   "fieldPhone": { "message": "Phone" },
+  "fieldFax": { "message": "Fax" },
   "fieldEmail": { "message": "Email" },
   "fieldAddress": { "message": "Address" },
   "fieldOrganization": { "message": "Organization" },

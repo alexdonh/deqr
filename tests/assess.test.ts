@@ -279,3 +279,37 @@ describe('MATMSG', () => {
     expect(result.payload.fields).toContainEqual({ key: 'fieldSubject', value: 'Re: hi; ok' });
   });
 });
+
+describe('DoCoMo legacy formats', () => {
+  it('reads a BIZCARD as a contact', () => {
+    const result = check('BIZCARD:N:John;X:Doe;T:CTO;C:Acme;B:+15550100;F:+15550101;E:j@acme.com;;');
+    expect(result.payload.kind).toBe('contact');
+    expect(result.payload.fields).toEqual([
+      { key: 'fieldName', value: 'John Doe' },
+      { key: 'fieldTitle', value: 'CTO' },
+      { key: 'fieldOrganization', value: 'Acme' },
+      { key: 'fieldPhone', value: '+15550100' },
+      { key: 'fieldFax', value: '+15550101' },
+      { key: 'fieldEmail', value: 'j@acme.com' },
+    ]);
+  });
+
+  it('judges a MEBKM by its link, not its title', () => {
+    const result = check('MEBKM:TITLE:Your bank;URL:https\\://paypal.com@evil.tld/login;;');
+    expect(result.payload.kind).toBe('url');
+    expect(result.payload.url?.asciiHost).toBe('evil.tld');
+    expect(result.level).toBe('danger');
+    expect(result.openable).toBe(false);
+    // Title last: the host is the fact, the title is attacker prose.
+    expect(result.payload.fields.at(-1)).toEqual({ key: 'fieldName', value: 'Your bank' });
+  });
+
+  it('reads MMS like SMS', () => {
+    const result = check('MMS:+15550100:call me back');
+    expect(result.payload.kind).toBe('sms');
+    expect(result.payload.fields).toEqual([
+      { key: 'fieldNumber', value: '+15550100' },
+      { key: 'fieldMessage', value: 'call me back' },
+    ]);
+  });
+});

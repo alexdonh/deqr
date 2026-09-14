@@ -191,6 +191,48 @@ function classifyMatmsg(text: string): Payload {
   return classify(`mailto:${to}${query ? `?${query}` : ''}`);
 }
 
+function classifyBizcard(text: string): Payload {
+  const entries = new Map<string, string>();
+  for (const part of splitFields(text.slice('BIZCARD:'.length))) {
+    const colon = part.indexOf(':');
+    if (colon <= 0) continue;
+    entries.set(part.slice(0, colon).toUpperCase(), unescape(part.slice(colon + 1)));
+  }
+  const fields: Field[] = [];
+  // The name arrives split in two and belongs on one line.
+  const name = [entries.get('N'), entries.get('X')].filter(Boolean).join(' ');
+  if (name) fields.push({ key: 'fieldName', value: name });
+  for (const [tag, key] of [
+    ['T', 'fieldTitle'],
+    ['C', 'fieldOrganization'],
+    ['A', 'fieldAddress'],
+    ['B', 'fieldPhone'],
+    ['M', 'fieldPhone'],
+    ['F', 'fieldFax'],
+    ['E', 'fieldEmail'],
+  ] as const) {
+    const value = entries.get(tag);
+    if (value) fields.push({ key, value });
+  }
+  return { kind: 'contact', labelKey: 'payloadContact', fields };
+}
+
+function classifyMebkm(text: string): Payload {
+  const entries = new Map<string, string>();
+  for (const part of splitFields(text.slice('MEBKM:'.length))) {
+    const colon = part.indexOf(':');
+    if (colon <= 0) continue;
+    entries.set(part.slice(0, colon).toUpperCase(), unescape(part.slice(colon + 1)));
+  }
+  const url = entries.get('URL');
+  if (!url) return { kind: 'text', labelKey: 'payloadText', fields: [{ key: 'fieldText', value: text }] };
+  const payload = classify(url);
+  const title = entries.get('TITLE');
+  // Second, never first: the title is attacker-chosen prose, the host is the fact.
+  if (title) payload.fields = [...payload.fields, { key: 'fieldName', value: title }];
+  return payload;
+}
+
 /** vCard / iCalendar: `KEY;PARAM:value` per unfolded line. */
 function classifyIcalLike(
   text: string,
@@ -405,6 +447,8 @@ export function classify(text: string): Payload {
   if (upper.startsWith('WIFI:')) return classifyWifi(trimmed);
   if (upper.startsWith('MECARD:')) return classifyMecard(trimmed);
   if (upper.startsWith('MATMSG:')) return classifyMatmsg(trimmed);
+  if (upper.startsWith('BIZCARD:')) return classifyBizcard(trimmed);
+  if (upper.startsWith('MEBKM:')) return classifyMebkm(trimmed);
   if (upper.startsWith('BEGIN:VCARD')) return classifyIcalLike(trimmed, 'contact', 'payloadContact');
   if (upper.startsWith('BEGIN:VCALENDAR') || upper.startsWith('BEGIN:VEVENT')) {
     return classifyIcalLike(trimmed, 'calendar', 'payloadCalendar');
@@ -453,9 +497,10 @@ export function classify(text: string): Payload {
     };
   }
 
-  if (scheme === 'sms' || scheme === 'smsto') {
+  if (scheme === 'sms' || scheme === 'smsto' || scheme === 'mms' || scheme === 'mmsto') {
     const body = trimmed.slice(scheme.length + 1).replace(/^\/\//, '');
-    // Both `sms:+123?body=x` and `SMSTO:+123:x` are in the wild.
+    // Both `sms:+123?body=x` and `SMSTO:+123:x` are in the wild; mms is the same
+    // shape with attachments the payload cannot carry.
     const [target, ...restParts] = body.split(/[?:]/);
     const message = restParts.join(':').replace(/^body=/, '');
     const fields: Field[] = [{ key: 'fieldNumber', value: target ?? '' }];
