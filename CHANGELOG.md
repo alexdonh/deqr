@@ -2,6 +2,11 @@
 
 
 
+## 0.1.5 - 2026-09-17
+
+- feat: add BIZCARD and MEBKM support
+- feat: add MATMSG support
+
 ## 0.1.4 - 2026-09-14
 
 - feat: improve UI interaction handling
