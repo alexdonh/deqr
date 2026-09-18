@@ -207,7 +207,9 @@ export class Ui {
   private readonly root: ShadowRoot;
   private readonly host: HTMLElement;
   private readonly layer: HTMLDivElement;
-  private readonly tracked: Tracked[] = [];
+  private readonly tracked = new Map<Rasterizable, Tracked>();
+  private readonly visible = new Set<Tracked>();
+  private readonly onScreen: IntersectionObserver;
   private scrim?: HTMLDivElement;
   private frame = 0;
   /** Last known pointer position in viewport coordinates. */
@@ -228,6 +230,23 @@ export class Ui {
     this.layer = make('div', 'layer');
     this.root.append(style, this.layer);
     document.documentElement.append(host);
+
+    this.onScreen = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const tracked = this.tracked.get(entry.target as Rasterizable);
+          if (!tracked) continue;
+          if (entry.isIntersecting) {
+            this.visible.add(tracked);
+            continue;
+          }
+          this.visible.delete(tracked);
+          if (this.active === tracked) this.conceal(tracked);
+        }
+        this.schedule();
+      },
+      { rootMargin: '50px' },
+    );
 
     // Inside the shadow root, so the page cannot read or flip the theme.
     applyTheme(this.layer, settings.theme);
@@ -292,7 +311,7 @@ export class Ui {
 
   add(el: Rasterizable, outcome: Outcome): void {
     if (outcome.status === 'none') return;
-    if (this.tracked.some((t) => t.el === el)) return;
+    if (this.tracked.has(el)) return;
 
     const badge = make('button', 'badge');
     badge.type = 'button';
@@ -324,24 +343,30 @@ export class Ui {
     this.layer.append(badge);
     const tracked: Tracked = { el, badge };
     if (outcome.status === 'locked') tracked.origin = outcome.origin;
-    this.tracked.push(tracked);
+    this.tracked.set(el, tracked);
+    this.onScreen.observe(el);
 
     badge.addEventListener('focus', () => this.reveal(tracked));
     badge.addEventListener('blur', () => this.conceal(tracked));
-    this.schedule();
   }
 
   dropLocked(origin: string): Rasterizable[] {
     const freed: Rasterizable[] = [];
-    for (let i = this.tracked.length - 1; i >= 0; i--) {
-      const tracked = this.tracked[i]!;
+    for (const tracked of this.tracked.values()) {
       if (tracked.origin !== origin) continue;
-      tracked.badge.remove();
-      if (this.active === tracked) this.active = undefined;
-      this.tracked.splice(i, 1);
+      this.drop(tracked);
       freed.push(tracked.el);
     }
     return freed;
+  }
+
+  /** Out of the DOM, out of the observer, out of both indexes. */
+  private drop(tracked: Tracked): void {
+    tracked.badge.remove();
+    this.onScreen.unobserve(tracked.el);
+    this.visible.delete(tracked);
+    this.tracked.delete(tracked.el);
+    if (this.active === tracked) this.active = undefined;
   }
 
   /** True for the click a press already handled; keyboard clicks have no press. */
@@ -352,6 +377,7 @@ export class Ui {
   }
 
   private reveal(tracked: Tracked): void {
+    if (this.active && this.active !== tracked) this.conceal(this.active);
     this.active = tracked;
     this.place(tracked);
     tracked.badge.classList.add('show');
@@ -366,7 +392,7 @@ export class Ui {
 
   /** Coalesce pointer, scroll and resize into one frame of layout reads. */
   private schedule(): void {
-    if (this.frame !== 0 || this.tracked.length === 0) return;
+    if (this.frame !== 0 || this.tracked.size === 0) return;
     this.frame = requestAnimationFrame(() => {
       this.frame = 0;
       this.hitTest();
@@ -375,16 +401,26 @@ export class Ui {
   }
 
   private hitTest(): void {
+    if (this.scrim) return;
     const at = this.pointer;
-    const hit =
-      at &&
-      this.tracked.find(
-        (t) =>
-          t.el.isConnected &&
-          (covers(t.el.getBoundingClientRect(), at) ||
-            // The badge hangs past the image edge; moving onto it is not leaving.
-            (t.badge.classList.contains('show') && covers(t.badge.getBoundingClientRect(), at))),
-      );
+    let hit: Tracked | undefined;
+    if (at) {
+      for (const tracked of this.visible) {
+        if (!tracked.el.isConnected) {
+          this.drop(tracked);
+          continue;
+        }
+        if (
+          covers(tracked.el.getBoundingClientRect(), at) ||
+          // The badge hangs past the image edge; moving onto it is not leaving.
+          (tracked.badge.classList.contains('show') &&
+            covers(tracked.badge.getBoundingClientRect(), at))
+        ) {
+          hit = tracked;
+          break;
+        }
+      }
+    }
     if (hit) {
       if (this.active !== hit) this.reveal(hit);
       return;
@@ -393,14 +429,14 @@ export class Ui {
   }
 
   /** Badges sit in viewport coordinates, so they follow scroll on the next frame. */
-  private place({ el, badge }: Tracked): void {
-    if (!el.isConnected) {
-      badge.remove();
+  private place(tracked: Tracked): void {
+    if (!tracked.el.isConnected) {
+      this.drop(tracked);
       return;
     }
-    const rect = el.getBoundingClientRect();
-    badge.style.left = `${rect.left + rect.width / 2}px`;
-    badge.style.top = `${Math.max(2, rect.bottom - 26)}px`;
+    const rect = tracked.el.getBoundingClientRect();
+    tracked.badge.style.left = `${rect.left + rect.width / 2}px`;
+    tracked.badge.style.top = `${Math.max(2, rect.bottom - 26)}px`;
   }
 
   private close(): void {
