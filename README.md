@@ -48,9 +48,10 @@ including inside open shadow roots. CSS `background-image` isn't scanned yet.
 
 Cross-origin images served without CORS headers taint the canvas, which means
 the content script can't read a single pixel of them. Those get an **Allow
-deQR** badge instead; grant that one origin on the options page and the
-background will fetch and decode it. deQR ships with **no host permissions** -
-only optional ones you grant per origin.
+deQR** badge instead. Clicking it opens the options page with that origin
+already filled in: confirm the browser's permission prompt and deQR puts you
+back on the page with the badge decoded. deQR ships with **no host
+permissions** - only optional ones you grant per origin.
 
 ### What it understands
 

@@ -49,7 +49,21 @@ export interface GrantRequest {
   origin: string;
 }
 
-export type Request = DecodeRequest | DecodeRemoteRequest | GrantedRequest | GrantRequest;
+/**
+ * Options page -> the tab the grant came from: that origin is readable now, so
+ * the locked images on it can be re-judged without a reload.
+ */
+export interface GrantAddedNotice {
+  type: 'grant-added';
+  origin: string;
+}
+
+export type Request =
+  | DecodeRequest
+  | DecodeRemoteRequest
+  | GrantedRequest
+  | GrantRequest
+  | GrantAddedNotice;
 
 export interface QrResult {
   /** Exact decoded payload. Untrusted third-party input - never render as HTML. */

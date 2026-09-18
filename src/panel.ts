@@ -190,6 +190,7 @@ function qrIcon(): SVGSVGElement {
 interface Tracked {
   el: Rasterizable;
   badge: HTMLButtonElement;
+  origin?: string;
 }
 
 function detail(reason: Reason): string {
@@ -322,11 +323,25 @@ export class Ui {
 
     this.layer.append(badge);
     const tracked: Tracked = { el, badge };
+    if (outcome.status === 'locked') tracked.origin = outcome.origin;
     this.tracked.push(tracked);
 
     badge.addEventListener('focus', () => this.reveal(tracked));
     badge.addEventListener('blur', () => this.conceal(tracked));
     this.schedule();
+  }
+
+  dropLocked(origin: string): Rasterizable[] {
+    const freed: Rasterizable[] = [];
+    for (let i = this.tracked.length - 1; i >= 0; i--) {
+      const tracked = this.tracked[i]!;
+      if (tracked.origin !== origin) continue;
+      tracked.badge.remove();
+      if (this.active === tracked) this.active = undefined;
+      this.tracked.splice(i, 1);
+      freed.push(tracked.el);
+    }
+    return freed;
   }
 
   /** True for the click a press already handled; keyboard clicks have no press. */

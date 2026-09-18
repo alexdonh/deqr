@@ -160,6 +160,18 @@ export class Scanner {
     this.mutations?.disconnect();
   }
 
+  regrant(origin: string, els: Rasterizable[]): void {
+    this.grantedOrigins.set(origin, true);
+    for (const [key, outcome] of this.results) {
+      if (outcome.status === 'locked' && outcome.origin === origin) this.results.delete(key);
+    }
+    this.stage1Ms = 0;
+    for (const el of els) {
+      this.seen.delete(el);
+      this.enqueue(el);
+    }
+  }
+
   private considerTree(root: Element | ShadowRoot): void {
     if (root instanceof Element) this.consider(root);
     // One '*' walk rather than a candidate selector plus a second pass for

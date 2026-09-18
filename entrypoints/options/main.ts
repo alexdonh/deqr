@@ -7,6 +7,10 @@ import { applyTheme, readSettings, writeSettings, type Theme } from '../../src/s
 // scripts, which is why granting an origin happens here rather than inline on
 // the page: the locked badge sends the user to this page instead of prompting.
 
+const params = new URLSearchParams(location.search);
+const pendingOrigin = params.get('origin');
+const returnTab = Number(params.get('from')) || undefined;
+
 const $ = <T extends HTMLElement>(id: string): T => {
   const el = document.getElementById(id);
   if (!el) throw new Error(`missing #${id}`);
@@ -15,6 +19,7 @@ const $ = <T extends HTMLElement>(id: string): T => {
 
 const grantForm = $<HTMLFormElement>('grant-form');
 const grantInput = $<HTMLInputElement>('grant-input');
+const grantSubmit = $<HTMLButtonElement>('grant-submit');
 const grantError = $<HTMLParagraphElement>('grant-error');
 const grantedList = $<HTMLUListElement>('granted-list');
 const siteForm = $<HTMLFormElement>('site-form');
@@ -133,7 +138,24 @@ grantForm.addEventListener('submit', async (event) => {
   }
   grantInput.value = '';
   await renderGranted();
+  await goBack(origin);
 });
+
+async function goBack(origin: string): Promise<void> {
+  if (returnTab === undefined || origin !== pendingOrigin) return;
+  // A tab with no listener rejects; the images there simply stay locked until
+  // the next load, which is no reason to strand the user on this page.
+  await browser.tabs
+    .sendMessage(returnTab, { type: 'grant-added', origin })
+    .catch(() => undefined);
+  try {
+    await browser.tabs.update(returnTab, { active: true });
+  } catch {
+    return; // Tab is gone. Stay here rather than closing onto nothing.
+  }
+  const self = await browser.tabs.getCurrent();
+  if (self?.id !== undefined) await browser.tabs.remove(self.id);
+}
 
 siteForm.addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -171,6 +193,11 @@ async function init(): Promise<void> {
   applyTheme(document.documentElement, settings.theme);
   for (const input of themes) input.checked = input.value === settings.theme;
   await Promise.all([renderGranted(), renderSites()]);
+
+  if (pendingOrigin) {
+    grantInput.value = pendingOrigin;
+    grantSubmit.focus();
+  }
 }
 
 void init();

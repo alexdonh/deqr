@@ -36,7 +36,7 @@ export default defineBackground(() => {
     browser.runtime.openOptionsPage();
   });
 
-  browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const request = message as Request;
     switch (request.type) {
       case 'decode':
@@ -52,13 +52,25 @@ export default defineBackground(() => {
           .catch(() => sendResponse(false));
         return true;
       case 'request-grant':
-        void browser.runtime.openOptionsPage();
+        openOptionsPage(request.origin, sender.tab?.id);
         return false;
       default:
         return false;
     }
   });
 });
+
+function openOptionsPage(origin: string, from: number | undefined): void {
+  if (from === undefined) {
+    void browser.runtime.openOptionsPage();
+    return;
+  }
+  const query = new URLSearchParams({ origin, from: String(from) });
+  void browser.tabs.create({
+    url: `${browser.runtime.getURL('/options.html')}?${query}`,
+    openerTabId: from,
+  });
+}
 
 function toResult(text: string): QrResult {
   const payload = classify(text);
