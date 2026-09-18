@@ -2,6 +2,11 @@
 
 
 
+## 0.1.6 - 2026-09-18
+
+- feat: improve scheduler and observer perf on pages with many qr, also avoid duplications
+- feat: better experience for allowing CORS origin
+
 ## 0.1.5 - 2026-09-17
 
 - feat: add BIZCARD and MEBKM support
