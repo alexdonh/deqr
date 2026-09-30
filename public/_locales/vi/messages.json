@@ -56,7 +56,7 @@
   "optScanning": { "message": "Quét" },
   "optDeepScan": { "message": "Quét sâu" },
   "optDeepScanHelp": {
-    "message": "Gửi mọi hình ảnh đến bộ giải mã thay vì sàng lọc trước các hoa văn định vị mã QR. Giúp nhận diện được những mã bị mờ, méo hoặc ảnh chụp lại mà bộ lọc nhanh có thể bỏ sót. Sẽ làm chậm hơn rõ rệt trên các trang có nhiều hình ảnh."
+    "message": "Gửi mọi hình ảnh đến bộ giải mã thay vì sàng lọc trước các hoa văn định vị mã QR. Giúp nhận diện được những mã bị mờ, méo hoặc ảnh chụp lại mà bộ lọc nhanh có thể bỏ sót. Sẽ làm chậm hơn rõ rệt trên các trang có nhiều hình ảnh. Đồng thời hiển thị nút Cho phép deQR trên mọi hình vuông từ nguồn khác mà deQR không đọc được, không chỉ những hình được đánh dấu là mã QR."
   },
   "optRevealSecrets": { "message": "Hiển thị ngay thông tin nhạy cảm" },
   "optRevealSecretsHelp": {

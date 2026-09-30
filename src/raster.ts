@@ -54,6 +54,8 @@ function originOf(url: string): string {
 /** Wrap the SecurityError a tainted canvas raises, whichever accessor hit it. */
 function rethrowIfTainted(err: unknown, origin: string): never {
   if (err instanceof DOMException && err.name === 'SecurityError') {
+    canvas = undefined;
+    ctx = undefined;
     throw new TaintedCanvasError(origin);
   }
   throw err;
@@ -67,8 +69,54 @@ export function intrinsicSize(el: Rasterizable): { w: number; h: number } | unde
   if (el instanceof HTMLCanvasElement) {
     return el.width > 0 ? { w: el.width, h: el.height } : undefined;
   }
+  const { w, h } = layoutSize(el);
+  return w > 0 ? { w: Math.round(w), h: Math.round(h) } : undefined;
+}
+
+export function layoutSize(el: Rasterizable): { w: number; h: number } {
+  const svg = el instanceof SVGSVGElement;
+  const w = svg ? el.clientWidth : el.offsetWidth;
+  const h = svg ? el.clientHeight : el.offsetHeight;
+  if (w > 0 && h > 0) return { w, h };
+  // Firefox reports 0 client size for some inline <svg>.
   const rect = el.getBoundingClientRect();
-  return rect.width > 0 ? { w: Math.round(rect.width), h: Math.round(rect.height) } : undefined;
+  return { w: rect.width, h: rect.height };
+}
+
+const PAINT = [
+  'fill',
+  'fill-opacity',
+  'fill-rule',
+  'stroke',
+  'stroke-width',
+  'stroke-opacity',
+  'stroke-linecap',
+  'stroke-linejoin',
+  'opacity',
+  'display',
+  'visibility',
+] as const;
+
+function inlinePaint(from: SVGSVGElement, to: SVGSVGElement): void {
+  const src = [from, ...from.querySelectorAll('*')];
+  const dst = [to, ...to.querySelectorAll('*')];
+  for (let i = 0; i < src.length; i++) {
+    const computed = getComputedStyle(src[i]!);
+    const style = (dst[i] as SVGElement).style;
+    for (const prop of PAINT) style.setProperty(prop, computed.getPropertyValue(prop));
+  }
+}
+
+export async function corsImage(el: HTMLImageElement): Promise<HTMLImageElement | undefined> {
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.src = el.currentSrc || el.src;
+  try {
+    await img.decode();
+    return img;
+  } catch {
+    return undefined;
+  }
 }
 
 /** Load SVG markup as an image. A data: URL does not taint, so this needs no permission. */
@@ -94,6 +142,7 @@ async function drawable(
 
   if (el instanceof SVGSVGElement) {
     const clone = el.cloneNode(true) as SVGSVGElement;
+    inlinePaint(el, clone);
     clone.setAttribute('width', String(size.w));
     clone.setAttribute('height', String(size.h));
     clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');

@@ -119,6 +119,11 @@ const server = spawn('python3', ['-m', 'http.server', String(HTTP_PORT)], {
   cwd: fixtures,
   stdio: 'ignore',
 });
+// Same files on another port: a cross-origin source with no CORS headers.
+const foreign = spawn('python3', ['-m', 'http.server', String(HTTP_PORT + 1)], {
+  cwd: fixtures,
+  stdio: 'ignore',
+});
 const chrome = spawn(
   browser,
   [
@@ -143,6 +148,7 @@ const watchdog = setTimeout(() => {
   console.error('verify-browser: timed out after 120s');
   chrome.kill('SIGKILL');
   server.kill('SIGKILL');
+  foreign.kill('SIGKILL');
   process.exit(1);
 }, 120_000);
 
@@ -206,6 +212,9 @@ try {
   console.log(`locked badges:      ${stats.locked}`);
 
   if (stats.host !== 1) failed = true;
+  // Only #locked-hinted may be locked: Wikimedia decodes over CORS, and the
+  // unhinted square gives no reason to ask for a grant.
+  if (page === 'qr-test.html' && stats.locked !== 1) failed = true;
 
   /**
    * Move the real pointer over an element and report whether a deQR badge is
@@ -242,11 +251,28 @@ try {
     const reach = {
       'under an overlay': `document.querySelector('img[alt="overlaid QR"]')`,
       'in a shadow root': `document.querySelector('qr-in-shadow')?.shadowRoot?.querySelector('img')`,
+      'filled in late': `document.getElementById('late-svg')`,
+      'scales in': `document.querySelector('#pop-host svg')`,
+      'painted by CSS': `document.querySelector('#css-paint-host svg')`,
     };
     for (const [label, selector] of Object.entries(reach)) {
       const result = await badgeUnderPointer(selector);
       console.log(`${`${label}:`.padEnd(20)}${result}`);
       if (result !== 'badge') failed = true;
+    }
+
+    // With the one-locked-badge check above: Wikimedia's badge must be Reveal
+    // (fetched over CORS), and a square with no QR hint must not ask for a grant.
+    const tainted = {
+      '#cross-origin': 'badge',
+      '#locked-hinted': 'badge',
+      '#locked-unhinted': 'no badge',
+      '#after-taint': 'badge',
+    };
+    for (const [id, expected] of Object.entries(tainted)) {
+      const result = await badgeUnderPointer(`document.querySelector('${id}')`);
+      console.log(`${`${id}:`.padEnd(20)}${result}`);
+      if (result !== expected) failed = true;
     }
   }
 
@@ -282,6 +308,7 @@ try {
     clearTimeout(watchdog);
     chrome.kill('SIGKILL');
     server.kill('SIGKILL');
+    foreign.kill('SIGKILL');
     await rm(profile, { recursive: true, force: true });
     process.exit(0);
   }
@@ -308,6 +335,7 @@ try {
   clearTimeout(watchdog);
   chrome.kill('SIGKILL');
   server.kill('SIGKILL');
+  foreign.kill('SIGKILL');
   await rm(profile, { recursive: true, force: true });
 }
 

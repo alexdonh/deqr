@@ -28,6 +28,8 @@
       figcaption { margin-top: 8px; font-size: 12px; color: #5c6270; }
       figcaption b { display: block; color: #16181d; font-size: 12.5px; }
       .expect { color: #8a1c10; }
+      .css-paint g { fill: #000; }
+      .css-paint rect { fill: #fff; }
     </style>
   </head>
   <body>
@@ -150,6 +152,28 @@
       </figure>
     </div>
 
+    <h2>Changing after load - all three must be badged</h2>
+    <p class="note">
+      Inline SVG generators rarely hold still. One renders an empty
+      <code>&lt;svg&gt;</code> and fills it once the value arrives, one scales in
+      from zero when it scrolls into view, one takes its colours from the page's
+      stylesheet, which serializing the SVG leaves behind.
+    </p>
+    <div class="grid">
+      <figure>
+        <svg id="late-svg" width="168" height="168" viewBox="0 0 264 264"></svg>
+        <figcaption><b>Filled in late</b>empty at first scan, drawn 1.5s later</figcaption>
+      </figure>
+      <figure>
+        <div id="pop-host" style="transform: scale(0); transition: transform 1s"></div>
+        <figcaption><b>Scales in</b>first seen at scale(0), like a modal or reveal-on-scroll</figcaption>
+      </figure>
+      <figure>
+        <div id="css-paint-host" class="css-paint"></div>
+        <figcaption><b>Painted by CSS</b>no fill attributes, colours from a class</figcaption>
+      </figure>
+    </div>
+
     <h2>Should not be badged</h2>
     <p class="note">
       A badge on any of these is a false positive: it means the prefilter is too
@@ -183,13 +207,17 @@
       </figure>
     </div>
 
-    <h2>Cross-origin, no CORS</h2>
+    <h2>Cross-origin</h2>
     <p class="note">
-      This image is served from another origin without CORS headers, so the
-      canvas is tainted and deQR cannot read a single pixel. Expect the amber
-      <b>Allow deQR</b> badge. Clicking it opens the options page; grant that
-      origin, reload, and the badge must become <b>Reveal</b>. This is the one
-      flow that has to be walked by hand.
+      A tainted image is first re-requested in CORS mode. Wikimedia answers with
+      <code>Access-Control-Allow-Origin: *</code>, so it must decode to a plain
+      <b>Reveal</b> badge with no grant. The two <code>:8732</code> images
+      come from a second port that <code>pnpm verify</code> serves, and
+      Python's server sends no CORS headers, so they stay locked. With no pixels to read,
+      only the one whose markup says QR gets the amber <b>Allow deQR</b> badge;
+      the other stands in for a square avatar and gets nothing. Clicking Allow
+      opens the options page; grant that origin and the badge must become
+      <b>Reveal</b>. This is the one flow that has to be walked by hand.
     </p>
     <div class="grid">
       <figure>
@@ -198,7 +226,19 @@
           src="https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg"
           alt="cross-origin QR"
         />
-        <figcaption><b>upload.wikimedia.org</b>tainted canvas - needs a grant</figcaption>
+        <figcaption><b>upload.wikimedia.org</b>sends CORS - decodes with no grant</figcaption>
+      </figure>
+      <figure>
+        <img id="locked-hinted" src="http://127.0.0.1:8732/img/safe-link.png" alt="QR code" />
+        <figcaption><b>:8732, alt="QR code"</b>no CORS - Allow badge</figcaption>
+      </figure>
+      <figure>
+        <img id="locked-unhinted" src="http://127.0.0.1:8732/img/dense.jpg" alt="avatar" />
+        <figcaption><b>:8732, alt="avatar"</b>no CORS, no hint - no badge unless deep scan</figcaption>
+      </figure>
+      <figure>
+        <img id="after-taint" src="./img/dense.jpg" alt="same-origin QR after tainted ones" />
+        <figcaption><b>Same origin, after them</b>must Reveal - same size as the tainted image before it, so it shares its scratch canvas</figcaption>
       </figure>
     </div>
 
@@ -214,6 +254,33 @@
       svg.setAttribute('width', '168');
       svg.setAttribute('height', '168');
       host.replaceWith(svg);
+
+      // The "changing after load" three, each a copy of the same drawing.
+      const inline = (hostId, transform = (t) => t) => {
+        const s = new DOMParser()
+          .parseFromString(transform(svgText), 'image/svg+xml')
+          .documentElement;
+        s.removeAttribute('id');
+        s.querySelector('#barcode')?.removeAttribute('id');
+        s.setAttribute('viewBox', '0 0 264 264');
+        s.setAttribute('width', '168');
+        s.setAttribute('height', '168');
+        document.getElementById(hostId).append(s);
+        return s;
+      };
+      const late = document.getElementById('late-svg');
+      setTimeout(() => {
+        const donor = new DOMParser().parseFromString(svgText, 'image/svg+xml').documentElement;
+        donor.querySelector('#barcode')?.removeAttribute('id');
+        late.append(...donor.children);
+      }, 1500);
+      inline('pop-host');
+      new IntersectionObserver(([entry], io) => {
+        if (!entry.isIntersecting) return;
+        io.disconnect();
+        entry.target.style.transform = 'scale(1)';
+      }).observe(document.getElementById('pop-host'));
+      inline('css-paint-host', (t) => t.replace(/ fill="#[0-9A-Fa-f]{6}"/g, ''));
 
       // data: URL image.
       document.getElementById('data-url-qr').src =

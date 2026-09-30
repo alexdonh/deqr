@@ -46,9 +46,12 @@ whole page, and exactly **3** crossings.
 `<img>` (PNG, JPG, WEBP, SVG), inline `<svg>`, `<canvas>`, and `data:` URLs,
 including inside open shadow roots. CSS `background-image` isn't scanned yet.
 
-Cross-origin images served without CORS headers taint the canvas, which means
-the content script can't read a single pixel of them. Those get an **Allow
-deQR** badge instead. Clicking it opens the options page with that origin
+Cross-origin images taint the canvas, which means the content script can't
+read a single pixel of them. deQR first re-requests the image in CORS mode;
+many CDNs allow that, and then it decodes like any other image. When the
+server doesn't, and the image is square and its `src`, `alt`, `title`, `id` or
+`class` mentions `qr` or `barcode` (any square image with deep scan on), it
+gets an **Allow deQR** badge instead. Clicking it opens the options page with that origin
 already filled in: confirm the browser's permission prompt and deQR puts you
 back on the page with the badge decoded. deQR ships with **no host
 permissions** - only optional ones you grant per origin.

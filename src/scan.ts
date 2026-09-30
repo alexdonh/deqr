@@ -18,7 +18,9 @@ import {
 } from './messages';
 import { looksLikeQr } from './prefilter';
 import {
+  corsImage,
   intrinsicSize,
+  layoutSize,
   rasterizeLuma,
   rasterizeSvgMarkupToPng,
   rasterizeToPng,
@@ -34,6 +36,7 @@ const MIN_ASPECT = 0.25;
 const MAX_ASPECT = 4;
 const LOCKED_MIN_ASPECT = 0.9;
 const LOCKED_MAX_ASPECT = 1.1;
+const QR_HINT = /qr|barcode/i;
 /**
  * Cumulative main-thread budget for stage-1 work on a page.
  *
@@ -51,7 +54,7 @@ const MUTATIONS: MutationObserverInit = {
   childList: true,
   subtree: true,
   attributes: true,
-  attributeFilter: ['src', 'srcset'],
+  attributeFilter: ['src', 'srcset', 'd'],
 };
 
 export type Outcome =
@@ -96,10 +99,21 @@ function isCandidate(el: Element): el is Rasterizable {
 
 /** Stage 0. Rendered geometry only - no pixel access, no allocation. */
 function passesGate(el: Rasterizable): boolean {
-  const rect = el.getBoundingClientRect();
-  if (rect.width < MIN_EDGE || rect.height < MIN_EDGE) return false;
-  const aspect = rect.width / rect.height;
+  const { w, h } = layoutSize(el);
+  if (w < MIN_EDGE || h < MIN_EDGE) return false;
+  const aspect = w / h;
   return aspect >= MIN_ASPECT && aspect <= MAX_ASPECT;
+}
+
+function square(w: number, h: number): boolean {
+  const aspect = w / h;
+  return aspect >= LOCKED_MIN_ASPECT && aspect <= LOCKED_MAX_ASPECT;
+}
+
+function hintsQr(el: HTMLImageElement): boolean {
+  return QR_HINT.test(
+    [el.currentSrc || el.src, el.alt, el.title, el.id, el.className].join(' '),
+  );
 }
 
 /** Cache key. Canvas and inline SVG have no stable URL, so they are never cached. */
@@ -139,10 +153,12 @@ export class Scanner {
 
     this.mutations = new MutationObserver((records) => {
       for (const record of records) {
+        const target = record.target as Element;
+        const svg = target.closest?.('svg');
+        if (svg) this.rescan(svg);
         if (record.type === 'attributes') {
           // src swapped on an element we already judged: re-examine it.
-          this.seen.delete(record.target as Element);
-          this.consider(record.target as Element);
+          this.rescan(target);
           continue;
         }
         for (const node of record.addedNodes) {
@@ -195,6 +211,11 @@ export class Scanner {
     this.considerTree(root);
   }
 
+  private rescan(el: Element): void {
+    this.seen.delete(el);
+    this.consider(el);
+  }
+
   private consider(el: Element): void {
     if (!isCandidate(el) || this.seen.has(el)) return;
     this.seen.add(el);
@@ -231,14 +252,16 @@ export class Scanner {
 
   private report(el: Rasterizable, outcome: Outcome, key: string | undefined): void {
     if (key) this.results.set(key, outcome);
-    if (outcome.status !== 'none') this.onOutcome(el, outcome);
+    this.onOutcome(el, outcome);
   }
 
-  private reportLocked(el: Rasterizable, origin: string, key: string | undefined): void {
-    const rect = el.getBoundingClientRect();
-    const aspect = rect.width / rect.height;
-    const square = aspect >= LOCKED_MIN_ASPECT && aspect <= LOCKED_MAX_ASPECT;
-    this.report(el, square ? { status: 'locked', origin } : { status: 'none' }, key);
+  private reportLocked(el: HTMLImageElement, origin: string, key: string | undefined): void {
+    const rendered = layoutSize(el);
+    const plausible =
+      square(rendered.w, rendered.h) &&
+      square(el.naturalWidth, el.naturalHeight) &&
+      (this.settings.deepScan || hintsQr(el));
+    this.report(el, plausible ? { status: 'locked', origin } : { status: 'none' }, key);
   }
 
   private async evaluate(el: Rasterizable): Promise<void> {
@@ -261,7 +284,7 @@ export class Scanner {
     if (key) {
       const cached = this.results.get(key);
       if (cached) {
-        if (cached.status !== 'none') this.onOutcome(el, cached);
+        this.onOutcome(el, cached);
         return;
       }
     }
@@ -269,17 +292,23 @@ export class Scanner {
     const size = intrinsicSize(el);
     if (!size) return;
 
+    await this.scanPixels(el, el, key);
+  }
+
+  private async scanPixels(
+    el: Rasterizable,
+    source: Rasterizable,
+    key: string | undefined,
+  ): Promise<void> {
     const stage1Start = performance.now();
 
     let detect: Luma;
     try {
-      detect = await rasterizeLuma(el, DETECT_SIZE);
+      detect = await rasterizeLuma(source, DETECT_SIZE);
     } catch (err) {
-      if (err instanceof TaintedCanvasError) {
-        await this.evaluateRemote(el, err.origin, key);
-        return;
-      }
-      throw err;
+      if (!(err instanceof TaintedCanvasError) || source !== el) throw err;
+      void this.evaluateTainted(el, err.origin, key).catch((e) => console.debug('deQR skip', e));
+      return;
     }
 
     const passed = this.settings.deepScan || looksLikeQr(detect);
@@ -290,7 +319,7 @@ export class Scanner {
       return;
     }
 
-    const png = await rasterizeToPng(el, DECODE_SIZE);
+    const png = await rasterizeToPng(source, DECODE_SIZE);
 
     // The count of these is the number the funnel exists to keep small: each one
     // is a serialize-and-copy across the process boundary.
@@ -302,6 +331,16 @@ export class Scanner {
       response.ok ? { status: 'qr', result: response.result } : { status: 'none' },
       key,
     );
+  }
+
+  private async evaluateTainted(
+    el: Rasterizable,
+    origin: string,
+    key: string | undefined,
+  ): Promise<void> {
+    const copy = el instanceof HTMLImageElement ? await corsImage(el) : undefined;
+    if (copy) await this.scanPixels(el, copy, key);
+    else await this.evaluateRemote(el, origin, key);
   }
 
   /**

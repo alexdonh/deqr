@@ -86,7 +86,7 @@
   "optScanning": { "message": "Scanning" },
   "optDeepScan": { "message": "Deep scan" },
   "optDeepScanHelp": {
-    "message": "Send every image to the decoder instead of pre-screening for QR finder patterns first. Catches blurred, skewed, and photographed codes that the fast filter misses. Noticeably slower on image-heavy pages."
+    "message": "Send every image to the decoder instead of pre-screening for QR finder patterns first. Catches blurred, skewed, and photographed codes that the fast filter misses. Noticeably slower on image-heavy pages. Also offers Allow deQR on every square cross-origin image deQR cannot read, not only ones labelled as QR codes."
   },
   "optRevealSecrets": { "message": "Show secrets immediately" },
   "optRevealSecretsHelp": {

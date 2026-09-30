@@ -310,8 +310,9 @@ export class Ui {
   }
 
   add(el: Rasterizable, outcome: Outcome): void {
+    const previous = this.tracked.get(el);
+    if (previous) this.drop(previous);
     if (outcome.status === 'none') return;
-    if (this.tracked.has(el)) return;
 
     const badge = make('button', 'badge');
     badge.type = 'button';
