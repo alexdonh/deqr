@@ -2,6 +2,11 @@
 
 
 
+## 0.1.7 - 2026-09-30
+
+- feat: add 64px icon
+- feat: enhance CORS handling for cross-origin images and improve badge logic
+
 ## 0.1.6 - 2026-09-18
 
 - feat: improve scheduler and observer perf on pages with many qr, also avoid duplications
